@@ -10,3 +10,9 @@ def response_error(response, code=400):
     else:
         assert code == response.status_code
 
+def compare_req_resp(req_obj, resp_obj):
+    for k,v in req_obj.iteritems():
+        if k in resp_obj.keys() and resp_obj[k] == v:
+            assert True
+        else:
+            assert False
