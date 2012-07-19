@@ -4,6 +4,28 @@ from phonenumbers import PhoneNumber
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 
 
+class TrimmedStringField(StringField):
+    def __init__(self, *args, **kwargs):
+        kwargs['required'] = kwargs.get('required', False) or kwargs.get('min_length', 0) > 0
+        return super(TrimmedStringField, self).__init__(*args, **kwargs)
+
+    def validate(self, value):
+        if self.required and not value:
+            self.error('Value cannot be blank.')
+
+    def __set__(self, instance, value):
+        value = self.to_python(value)
+        return super(TrimmedStringField, self).__set__(instance, value)
+
+    def to_python(self, value):
+        if value:
+            value = value.strip()
+        return value
+
+    def to_mongo(self, value):
+        return self.to_python(value)
+
+
 class TimezoneField(StringField):
     def __init__(self, *args, **kwargs):
         defaults = {

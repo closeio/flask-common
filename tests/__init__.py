@@ -3,7 +3,7 @@ import unittest
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
 
-from flask_common.fields import PhoneField, TimezoneField
+from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField
 
 app = Flask(__name__)
 
@@ -23,11 +23,16 @@ class Phone(db.Document):
 class Location(db.Document):
     timezone = TimezoneField()
 
+class TestTrimmedFields(db.Document):
+    name = TrimmedStringField(required=True)
+    comment = TrimmedStringField()
+
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         Phone.drop_collection()
         Location.drop_collection()
+        TestTrimmedFields.drop_collection()
 
     def test_format_number(self):
         phone = Phone(phone='4151231234')
@@ -57,6 +62,31 @@ class FieldTestCase(unittest.TestCase):
         location.save()
         location = Location.objects.get(id=location.id) 
         assert location.timezone == pytz.timezone('America/Los_Angeles')
+
+    def test_trimmedstring_field(self):
+        try:
+            test = TestTrimmedFields(name='') 
+            test.save()
+            self.fail("should have failed")
+        except ValidationError, e:
+            pass
+
+        try:
+            location = TestTrimmedFields(name='  ') 
+            test.save()
+            self.fail("should have failed")
+        except ValidationError, e:
+            pass
+
+        test = TestTrimmedFields(name=' 1', comment='') 
+        test.save()
+        self.assertEqual(test.name, '1')
+        self.assertEqual(test.comment, '')
+
+        test = TestTrimmedFields(name=' big name', comment=' this is a comment') 
+        test.save()
+        self.assertEqual(test.name, 'big name')
+        self.assertEqual(test.comment, 'this is a comment')
 
     def tearDown(self):
         pass

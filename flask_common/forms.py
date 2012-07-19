@@ -48,6 +48,10 @@ class ModelConverter(AdminModelConverter):
     def conv_Phone(self, model, field, kwargs):
         return self.conv_String(model, field, kwargs)
 
+    @converts('TrimmedStringField')
+    def conv_TrimmedString(self, model, field, kwargs):
+        return self.conv_String(model, field, kwargs)
+
 def model_form(*args, **kwargs):
     expand_references = kwargs.pop('expand_references', {})
     kwargs['base_class'] = AdminModelForm
