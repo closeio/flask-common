@@ -29,13 +29,3 @@ def smart_unicode(s, encoding='utf-8', errors='strict'):
         s = s.decode(encoding, errors)
     return s
 
-def get_authorization_header(request):
-    if 'AUTHORIZATION' in request.headers:
-        authorization = request.headers['AUTHORIZATION'].split()
-        if len(authorization) == 2 and authorization[0].lower() == 'basic':
-            try:
-                authorization_parts = base64.b64decode(authorization[1]).partition(':')
-                return smart_unicode(authorization_parts[0]), smart_unicode(authorization_parts[2]), True
-            except (TypeError, UnicodeDecodeError):
-                pass
-    return None, None, False
