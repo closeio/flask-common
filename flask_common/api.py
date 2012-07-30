@@ -16,8 +16,7 @@ class Client(object):
         response = method(
             self.base_url+endpoint,
             data=data != None and json.dumps(data),
-            headers={'Authorization' : 'Basic %s' % (base64.b64encode('%s:' % self.api_key), ), 'Content-Type': 'application/json'},
-            verify=False
+            headers={'Authorization' : 'Basic %s' % (base64.b64encode('%s:' % self.api_key), ), 'Content-Type': 'application/json'}
         )
 
         if response.ok:
