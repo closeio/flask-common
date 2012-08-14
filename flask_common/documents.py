@@ -15,12 +15,13 @@ class RandomPKDocument(Document):
     def save(self, *args, **kwargs):
         old_id = self.id
 
+        # Don't cascade saves by default.
+        kwargs['cascade'] = kwargs.get('cascade', False)
+
         try:
+
             if not self.id:
                 self.id = u'%s_%s' % (self.get_pk_prefix(), zbase62.b2a(os.urandom(32)))
-
-                # Don't cascade saves by default.
-                kwargs['cascade'] = kwargs.get('cascade', False)
 
                 # Throw an exception if another object with this id already exists.
                 kwargs['force_insert'] = True
