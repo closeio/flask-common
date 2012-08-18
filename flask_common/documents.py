@@ -54,6 +54,7 @@ class DocumentBase(Document):
         return unicode(self.__class__.__name__)
 
     def save(self, *args, **kwargs):
+        kwargs['cascade'] = kwargs.get('cascade', False)
         now = datetime.datetime.utcnow()
         if not self.date_created:
             self.date_created = now
