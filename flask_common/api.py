@@ -39,6 +39,8 @@ class Client(object):
     def get(self, endpoint, data=None):
         if data:
             endpoint += '/?'+urllib.urlencode(data)
+        else:
+            endpoint += '/'
         return self.dispatch('get', endpoint)
 
     def post(self, endpoint, data):
