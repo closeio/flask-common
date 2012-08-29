@@ -7,11 +7,12 @@ class APIError(Exception):
     pass
 
 class Client(object):
-    def __init__(self, base_url, api_key, async=False):
+    def __init__(self, base_url, api_key, async=False, config=None):
         assert base_url
         self.base_url = base_url
         self.api_key = api_key
         self.async = async
+        self.config = config
         if async:
             import grequests
             self.requests = grequests
@@ -24,7 +25,8 @@ class Client(object):
         response = method(
             self.base_url+endpoint,
             data=data != None and json.dumps(data),
-            headers={'Authorization' : 'Basic %s' % (base64.b64encode('%s:' % self.api_key), ), 'Content-Type': 'application/json'}
+            headers={'Authorization' : 'Basic %s' % (base64.b64encode('%s:' % self.api_key), ), 'Content-Type': 'application/json'},
+            config=self.config
         )
 
         if self.async:
