@@ -12,7 +12,5 @@ def response_error(response, code=400):
 
 def compare_req_resp(req_obj, resp_obj):
     for k,v in req_obj.iteritems():
-        if k in resp_obj.keys() and resp_obj[k] == v:
-            assert True
-        else:
-            assert False
+        assert k in resp_obj.keys(), 'Key %r not in response (keys are %r)' % (k, resp_obj.keys())
+        assert resp_obj[k] == v, 'Value for key %r should be %r but is %r' % (k, v, resp_obj[k])
