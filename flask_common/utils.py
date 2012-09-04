@@ -29,3 +29,9 @@ def smart_unicode(s, encoding='utf-8', errors='strict'):
         s = s.decode(encoding, errors)
     return s
 
+
+class Enum(object):
+    @classmethod
+    def choices(cls):
+        return [(getattr(cls,v), v) for v in dir(cls) if not callable(getattr(cls,v)) and not (v.startswith('__') and v.endswith('__'))]
+
