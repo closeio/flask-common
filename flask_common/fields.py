@@ -57,10 +57,13 @@ class PhoneField(StringField):
         return super(PhoneField, self).__set__(instance, value)
 
     def validate(self, value):
-        try:
-            self._parse(value)
-        except NumberParseException:
-            self.error('Phone is not valid')
+        if not self.required and not value:
+            return None
+        else:
+            try:
+                self._parse(value)
+            except NumberParseException:
+                self.error('Phone is not valid')
 
     def to_python(self, value):
         return self.to_raw_phone(value)
