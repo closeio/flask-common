@@ -52,10 +52,11 @@ class Client(object):
         return self.dispatch('put', endpoint+'/', data)
 
     # Only for async requests
-    def map(self, requests):
+    def map(self, reqs):
         if self.async:
             import grequests
+            resps = []
             return [(
-                json.loads(response.content) if response.ok
+                json.loads(response.content) if response.ok and response.content is not None
                 else APIError()
-            ) for response in  grequests.map(requests)]
+            ) for response in  grequests.map(reqs)]
