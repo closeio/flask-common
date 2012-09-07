@@ -1,5 +1,49 @@
 import csv
 import base64
+from logging.handlers import SMTPHandler
+
+
+class DetailedSMTPHandler(SMTPHandler):
+    def __init__(self, app_name, *args, **kwargs):
+        self.app_name = app_name
+        return super(DetailedSMTPHandler, self).__init__(*args, **kwargs)
+
+    def getSubject(self, record):
+        from socket import gethostname
+        return "[%s] Error on %s" % (self.app_name, gethostname())
+
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Format the record and send it to the specified addressees.
+        """
+        try:
+            import smtplib
+            from email.utils import formatdate
+            from flask import request
+            port = self.mailport
+            if not port:
+                port = smtplib.SMTP_PORT
+            smtp = smtplib.SMTP(self.mailhost, port)
+            msg = self.format(record)
+            msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s\n\nRequest.url: %s\n\nRequest.headers: %s\n\nRequest.args: %s\n\nRequest.data: %s" % (
+                            self.fromaddr,
+                            ",".join(self.toaddrs),
+                            self.getSubject(record),
+                            formatdate(), msg, request.url, request.headers, request.args, request.data)
+            if self.username:
+                if self.secure is not None:
+                    smtp.ehlo()
+                    smtp.starttls(*self.secure)
+                    smtp.ehlo()
+                smtp.login(self.username, self.password)
+            smtp.sendmail(self.fromaddr, self.toaddrs, msg)
+            smtp.quit()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
 
 """
 Wrapper around csv reader that ignores non utf-8 chars and strips the record
