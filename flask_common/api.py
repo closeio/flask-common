@@ -55,7 +55,6 @@ class Client(object):
     def map(self, reqs):
         if self.async:
             import grequests
-            resps = []
             return [(
                 json.loads(response.content) if response.ok and response.content is not None
                 else APIError()
