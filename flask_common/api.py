@@ -59,4 +59,9 @@ class Client(object):
             return [(
                 json.loads(response.content) if response.ok and response.content is not None
                 else APIError()
-            ) for response in  grequests.map(reqs)]
+            ) for response in grequests.map(reqs)]
+            # TODO
+            # There is no good way of catching or dealing with exceptions that are raised
+            # during the request sending process when using map or imap.
+            # When this issue is closed: https://github.com/kennethreitz/grequests/pull/15
+            # modify this method to pass the related exception
