@@ -10,7 +10,11 @@ class DetailedSMTPHandler(SMTPHandler):
 
     def getSubject(self, record):
         from socket import gethostname
-        return "[%s] Error on %s" % (self.app_name, gethostname())
+        error = 'Error'
+        ei = record.exc_info
+        if ei:
+            error = '(%s) %s' % (ei[0].__name__, ei[1])
+        return "[%s] %s on %s" % (self.app_name, error, gethostname())
 
     def emit(self, record):
         """
