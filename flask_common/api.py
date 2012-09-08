@@ -1,6 +1,7 @@
 import requests
 import base64
 import json
+import time
 import urllib
 
 class APIError(Exception):
@@ -68,10 +69,12 @@ class Client(object):
             # retry the api calls that failed until they succeed or the max_retries limit is reached
             retries = 0
             while True and retries < max_retries:
-                n_errors = reduce(lambda x, y: x + int(isinstance(y, APIError)), responses, 0)
+                n_errors = sum([int(isinstance(response, APIError)) for response in responses])
                 if not n_errors:
                     break
-                error_ids = [i for i in range(len(responses)) if isinstance(responses[i], APIError)]
+                # sleep 2 seconds before retrying requests
+                time.sleep(2)
+                error_ids = [i for i, resp in enumerate(responses) if isinstance(responses[i], APIError)]
                 new_reqs = [reqs[i] for i in range(len(responses)) if i in error_ids]
                 new_resps = [(
                     json.loads(response.content) if response.ok and response.content is not None
