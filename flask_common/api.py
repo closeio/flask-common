@@ -52,15 +52,33 @@ class Client(object):
         return self.dispatch('put', endpoint+'/', data)
 
     # Only for async requests
-    def map(self, reqs):
+    def map(self, reqs, max_retries=5):
+        # TODO
+        # There is no good way of catching or dealing with exceptions that are raised
+        # during the request sending process when using map or imap.
+        # When this issue is closed: https://github.com/kennethreitz/grequests/pull/15
+        # modify this method to repeat only the requests that failed because of
+        # connection errors
         if self.async:
             import grequests
-            return [(
+            responses = [(
                 json.loads(response.content) if response.ok and response.content is not None
                 else APIError()
             ) for response in grequests.map(reqs)]
-            # TODO
-            # There is no good way of catching or dealing with exceptions that are raised
-            # during the request sending process when using map or imap.
-            # When this issue is closed: https://github.com/kennethreitz/grequests/pull/15
-            # modify this method to pass the related exception
+            # retry the api calls that failed until they succeed or the max_retries limit is reached
+            retries = 0
+            while True and retries < max_retries:
+                n_errors = reduce(lambda x, y: x + int(isinstance(y, APIError)), responses, 0)
+                if not n_errors:
+                    break
+                error_ids = [i for i in range(len(responses)) if isinstance(responses[i], APIError)]
+                new_reqs = [reqs[i] for i in range(len(responses)) if i in error_ids]
+                new_resps = [(
+                    json.loads(response.content) if response.ok and response.content is not None
+                    else APIError()
+                ) for response in grequests.map(new_reqs)]
+                # update the responses that previously finished with errors
+                for i in range(len(error_ids)):
+                    responses[error_ids[i]] = new_resps[i]
+                retries += 1
+            return responses
