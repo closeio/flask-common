@@ -7,8 +7,12 @@ class BetterDateTimeField(DateTimeField):
     def process_formdata(self, valuelist):
         if valuelist:
             date_str = u' '.join(valuelist)
-            try:
-                self.data = dateutil.parser.parse(date_str)
-            except ValueError:
+            # dateutil returns the current day if passing an empty string.
+            if date_str.strip():
+                try:
+                    self.data = dateutil.parser.parse(date_str)
+                except ValueError:
+                    self.data = None
+                    raise
+            else:
                 self.data = None
-                raise
