@@ -1,6 +1,7 @@
 from flask.ext.mongoengine import wtf
 from flask.ext.admin.contrib.mongoengine.view import AdminModelForm, AdminModelConverter
 from flask.ext.mongoengine.wtf.orm import converts
+from flask.ext.common.formfields import BetterDateTimeField
 
 from wtforms import fields
 
@@ -51,6 +52,10 @@ class ModelConverter(AdminModelConverter):
     @converts('TrimmedStringField')
     def conv_TrimmedString(self, model, field, kwargs):
         return self.conv_String(model, field, kwargs)
+
+    @converts('DateTimeField')
+    def conv_DateTime(self, model, field, kwargs):
+        return BetterDateTimeField(**kwargs)
 
 def model_form(*args, **kwargs):
     expand_references = kwargs.pop('expand_references', {})
