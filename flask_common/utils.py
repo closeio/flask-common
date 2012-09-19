@@ -9,12 +9,13 @@ class DetailedSMTPHandler(SMTPHandler):
         return super(DetailedSMTPHandler, self).__init__(*args, **kwargs)
 
     def getSubject(self, record):
+        from flask import request
         from socket import gethostname
         error = 'Error'
         ei = record.exc_info
         if ei:
             error = '(%s) %s' % (ei[0].__name__, ei[1])
-        return "[%s] %s on %s" % (self.app_name, error, gethostname())
+        return "[%s] %s %s on %s" % (self.app_name, request.path, error, gethostname())
 
     def emit(self, record):
         """
@@ -31,11 +32,11 @@ class DetailedSMTPHandler(SMTPHandler):
                 port = smtplib.SMTP_PORT
             smtp = smtplib.SMTP(self.mailhost, port)
             msg = self.format(record)
-            msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s\n\nRequest.url: %s\n\nRequest.headers: %s\n\nRequest.args: %s\n\nRequest.data: %s" % (
+            msg = "From: %s\nTo: %s\nSubject: %s\nDate: %s\n\n%s\n\nRequest.url: %s\n\nRequest.headers: %s\n\nRequest.args: %s\n\nRequest.form: %s\n\nRequest.data: %s\n" % (
                             self.fromaddr,
                             ",".join(self.toaddrs),
                             self.getSubject(record),
-                            formatdate(), msg, request.url, request.headers, request.args, request.data)
+                            formatdate(), msg, request.url, request.headers, request.args, request.form, request.data)
             if self.username:
                 if self.secure is not None:
                     smtp.ehlo()
