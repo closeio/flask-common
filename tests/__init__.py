@@ -6,7 +6,7 @@ import pytz
 
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
-from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField
+from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, rng
 from flask_common.formfields import BetterDateTimeField
 
 from werkzeug.datastructures import MultiDict
@@ -33,6 +33,9 @@ class Location(db.Document):
 class TestTrimmedFields(db.Document):
     name = TrimmedStringField(required=True)
     comment = TrimmedStringField()
+
+class Secret(db.Document):
+    password = EncryptedStringField(rng(32))
 
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
@@ -119,6 +122,54 @@ class FormFieldTestCase(unittest.TestCase):
         form = TestForm(MultiDict({'date': '2012-09-06 01:29:14'}))
         self.assertTrue(form.validate())
         self.assertEqual(form.data['date'], datetime.datetime(2012, 9, 6, 1, 29, 14))
+
+class SecretTestCase(unittest.TestCase):
+    def test_encrypted_field(self):
+        from mongoengine import connection
+        col = connection._get_db().secret
+
+        # Test creating password
+        s = Secret.objects.create(password='hello')
+        self.assertEqual(s.password, 'hello')
+        s.reload()
+        self.assertEqual(s.password, 'hello')
+
+        cipher = col.find({'_id': s.id})[0]['password']
+        self.assertTrue('hello' not in cipher)
+        self.assertTrue(len(cipher) > 16)
+
+        # Test changing password
+        s.password = 'other'
+        s.save()
+        s.reload()
+        self.assertEqual(s.password, 'other')
+
+        other_cipher = col.find({'_id': s.id})[0]['password']
+        self.assertTrue('other' not in other_cipher)
+        self.assertTrue(len(other_cipher) > 16)
+        self.assertNotEqual(other_cipher, cipher)
+
+        # Make sure password is encrypted differently if we resave.
+        s.password = 'hello'
+        s.save()
+        s.reload()
+        self.assertEqual(s.password, 'hello')
+
+        new_cipher = col.find({'_id': s.id})[0]['password']
+        self.assertTrue('hello' not in new_cipher)
+        self.assertTrue(len(new_cipher) > 16)
+        self.assertNotEqual(new_cipher, cipher)
+        self.assertNotEqual(other_cipher, cipher)
+
+        # Test empty password
+        s.password = None
+        s.save()
+        s.reload()
+        self.assertEqual(s.password, None)
+
+        raw = col.find({'_id': s.id})[0]
+        self.assertTrue('password' not in raw)
+
 
 if __name__ == '__main__':
     unittest.main()

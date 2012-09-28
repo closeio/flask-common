@@ -1,7 +1,11 @@
 import pytz
-from mongoengine.fields import StringField
+from mongoengine.fields import StringField, BinaryField
 from phonenumbers import PhoneNumber
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
+from bson import Binary
+from Crypto.Cipher import AES
+from Crypto import Random
+import Padding
 
 
 class TrimmedStringField(StringField):
@@ -93,3 +97,38 @@ class PhoneField(StringField):
 
     def prepare_query_value(self, op, value):
         return self.to_raw_phone(value)
+
+
+rng = Random.new().read
+
+class EncryptedStringField(BinaryField):
+    """
+    Encrypted string field. Uses AES256 bit encryption with a different 128 bit
+    IV every time the field is saved. Encryption is completely transparent to
+    the user as the field automatically unencrypts when the field is accessed
+    and encrypts when the document is saved.
+    """
+
+    IV_SIZE = 16
+
+    def __init__(self, key, *args, **kwargs):
+        """
+        Key: 32 byte binary string containing the 256 bit AES key
+        """
+        self.key = key
+        return super(EncryptedStringField, self).__init__(*args, **kwargs)
+
+    def _encrypt(self, data):
+        iv = rng(self.IV_SIZE)
+        ret = Binary(iv + AES.new(self.key, AES.MODE_CBC, iv).encrypt(Padding.appendPadding(data)))
+        return ret
+
+    def _decrypt(self, data):
+        iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
+        return Padding.removePadding(AES.new(self.key, AES.MODE_CBC, iv).decrypt(cipher))
+
+    def to_python(self, value):
+        return value and self._decrypt(value) or None
+
+    def to_mongo(self, value):
+        return value and self._encrypt(value) or None
