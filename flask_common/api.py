@@ -8,7 +8,7 @@ class APIError(Exception):
     pass
 
 class Client(object):
-    def __init__(self, base_url, api_key, async=False, config={}):
+    def __init__(self, base_url, api_key, async=False, config={'store_cookies': False}):
         assert base_url
         self.base_url = base_url
         self.api_key = api_key
