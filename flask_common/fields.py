@@ -14,6 +14,7 @@ class TrimmedStringField(StringField):
         return super(TrimmedStringField, self).__init__(*args, **kwargs)
 
     def validate(self, value):
+        super(TrimmedStringField, self).validate(value)
         if self.required and not value:
             self.error('Value cannot be blank.')
 
