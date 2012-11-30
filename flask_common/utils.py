@@ -66,6 +66,16 @@ class CsvReader(object):
         return row
 
 
+class SalesforceCsvReader(CsvReader):
+    def next(self):
+        row = self.reader.next()       
+        for idx, el in enumerate(row):
+            value = el.decode('utf8', errors='ignore').replace('\"', '').strip()
+            if value in ['[not provided]', '000000000000000AAA']:
+                value = None
+            row[idx] = value
+        return row
+    
 def smart_unicode(s, encoding='utf-8', errors='strict'):
     if isinstance(s, unicode):
         return s
