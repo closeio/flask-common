@@ -97,3 +97,65 @@ class Enum(object):
 def grouper(n, iterable):
     # e.g. 2, [1, 2, 3, 4, 5] -> [[1, 2], [3, 4], [5]]
     return [iterable[i:i+n] for i in range(0, len(iterable), n)]
+
+
+
+def mail_exception(subject=None, context=None, vars=True):
+    from socket import gethostname
+    import traceback, sys
+    from flask import current_app, request
+
+    exc_info = sys.exc_info()
+
+    if not subject:
+        subject = "[%s] %s %s on %s" % (request.host, request.path, exc_info[1].__class__.__name__, gethostname())
+
+    message = ''
+
+    if context:
+        message += 'Context:\n\n'
+        try:
+            message += '\n'.join(['%s: %s' % (k, v) for k, v in context.iteritems()])
+        except:
+            message += 'Error reporting context.'
+        message += '\n\n\n\n'
+
+
+    if vars:
+        tb = exc_info[2]
+        stack = []
+
+        while tb:
+            stack.append(tb.tb_frame)
+            tb = tb.tb_next
+
+        message = "Locals by frame, innermost last:\n"
+
+        for frame in stack:
+            message += "\nFrame %s in %s at line %s\n" % (frame.f_code.co_name,
+                                                 frame.f_code.co_filename,
+                                                 frame.f_lineno)
+            for key, value in frame.f_locals.items():
+                message += "\t%16s = " % key
+                # We have to be careful not to cause a new error in our error
+                # printer! Calling repr() on an unknown object could cause an
+                # error we don't want.
+                try:
+                    message += '%s\n' % repr(value)
+                except:
+                    message += "<ERROR WHILE PRINTING VALUE>\n"
+
+
+    message += '\n\n\n%s\n' % (
+            '\n'.join(traceback.format_exception(*exc_info)),
+        )
+
+    if not current_app.debug:
+        print subject
+        print
+        print message
+    else:
+        from flask.ext.mail import Mail, Message
+        msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=current_app.config['ADMINS'])
+        msg.body = message
+        current_app.mail.send(msg)
