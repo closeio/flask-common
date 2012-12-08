@@ -100,7 +100,7 @@ def grouper(n, iterable):
 
 
 
-def mail_exception(subject=None, context=None, vars=True):
+def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
     from socket import gethostname
     import traceback, sys
     from flask import current_app, request
@@ -108,7 +108,7 @@ def mail_exception(subject=None, context=None, vars=True):
     exc_info = sys.exc_info()
 
     if not subject:
-        subject = "[%s] %s %s on %s" % (request.host, request.path, exc_info[1].__class__.__name__, gethostname())
+        subject = "[%s] %s%s %s on %s" % (request.host, extra_subject and '%s: ' % extra_subject or '', request.path, exc_info[1].__class__.__name__, gethostname())
 
     message = ''
 
