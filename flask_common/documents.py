@@ -54,11 +54,13 @@ class DocumentBase(Document):
         return unicode(self.__class__.__name__)
 
     def save(self, *args, **kwargs):
+        update_date = kwargs.pop('update_date', True)
         kwargs['cascade'] = kwargs.get('cascade', False)
-        now = datetime.datetime.utcnow()
-        if not self.date_created:
-            self.date_created = now
-        self.date_updated = now
+        if update_date:
+            now = datetime.datetime.utcnow()
+            if not self.date_created:
+                self.date_created = now
+            self.date_updated = now
         return super(DocumentBase, self).save(*args, **kwargs)
 
     meta = {
