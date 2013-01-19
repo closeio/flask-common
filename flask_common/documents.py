@@ -68,3 +68,76 @@ class DocumentBase(Document):
         'abstract': True,
     }
 
+
+from bson.dbref import DBRef
+
+def fetch_related(objs, field_dict, cache_map=None):
+    """
+    Recursively fetches related objects for the given document instances.
+    Sample usage:
+
+    fetch_related(objs, {
+        'user': True, # for search_attributes called_by
+        'lead': {
+            'created_by': True,
+            'updated_by': True,
+        }
+    })
+
+    In this sample, users and leads for all objs will be fetched and attached.
+    Then, created_by and updated_by users are fetched in one query and attached.
+    Note that the function doesn't merge queries for the same document class
+    across multiple (recursive) function calls, but it never fetches the same
+    related object twice.
+    """
+
+    if not cache_map:
+        # list of objects that we fetched, over all iterations / from previous calls, by document class
+        cache_map = {}
+
+    # ids of objects that will be fetched in this iteration, by document class
+    id_set_map = {}
+
+    # Determine what IDs we want to fetch
+    for field_name, sub_field_dict in field_dict.iteritems():
+        refs = [obj._data[field_name] for obj in objs if isinstance(obj._data[field_name], DBRef)]
+        if refs:
+            document_class = getattr(objs[0].__class__, field_name).document_type
+
+            if not document_class in cache_map:
+                rel_obj_map = cache_map[document_class] = {}
+            else:
+                rel_obj_map = cache_map[document_class]
+
+            if not document_class in id_set_map:
+                id_set = id_set_map[document_class] = set()
+
+            # Never fetch already fetched objects
+            id_set.update(set(ref.id for ref in refs) - set(rel_obj_map.keys()))
+
+    # Fetch objects
+    for document_class, id_set in id_set_map.iteritems():
+        rel_obj_map = cache_map[document_class]
+
+        if id_set:
+            rel_obj_map.update(
+                document_class.objects.in_bulk(list(id_set))
+            )
+
+    # Assign objects
+    for field_name, sub_field_dict in field_dict.iteritems():
+        if objs:
+            document_class = getattr(objs[0].__class__, field_name).document_type
+
+            rel_obj_map = cache_map.get(document_class)
+            if rel_obj_map:
+                # Go recursive
+                if isinstance(sub_field_dict, dict):
+                    fetch_related(rel_obj_map.values(), sub_field_dict)
+
+                for obj in objs:
+                    val = obj._data[field_name]
+                    if val and isinstance(val, DBRef):
+                        rel_obj = rel_obj_map.get(val.id)
+                        if rel_obj:
+                            obj._data[field_name] = rel_obj
