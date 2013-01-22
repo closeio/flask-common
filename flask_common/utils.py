@@ -1,6 +1,8 @@
+import re
 import csv
 import base64
 import datetime
+import unidecode
 from logging.handlers import SMTPHandler
 
 
@@ -69,26 +71,26 @@ Wrapper around csv reader that ignores non utf-8 chars and strips the record
 class CsvReader(object):
     def __init__(self, file_name, delimiter=','):
         self.reader = csv.reader(open(file_name, 'rbU'), delimiter=delimiter)
- 
+
     def __iter__(self):
         return self
 
     def next(self):
-        row = self.reader.next()       
+        row = self.reader.next()
         row = [el.decode('utf8', errors='ignore').replace('\"', '').strip() for el in row]
         return row
 
 
 class SalesforceCsvReader(CsvReader):
     def next(self):
-        row = self.reader.next()       
+        row = self.reader.next()
         for idx, el in enumerate(row):
             value = el.decode('utf8', errors='ignore').replace('\"', '').strip()
             if value in ['[not provided]', '000000000000000AAA']:
                 value = None
             row[idx] = value
         return row
-    
+
 def smart_unicode(s, encoding='utf-8', errors='strict'):
     if isinstance(s, unicode):
         return s
@@ -177,3 +179,99 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
         msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=current_app.config['ADMINS'])
         msg.body = message
         current_app.mail.send(msg)
+
+class CsvHelper():
+
+    def __init__(self, header_indices, custom_headers):
+        self.header_indices = header_indices
+        self.custom_headers = custom_headers
+
+    @classmethod
+    def slugify(self, str, separator='_'):
+        str = unidecode.unidecode(str).lower().strip()
+        return re.sub(r'\W+', separator, str).strip(separator)
+
+    def value_in_row(self, row, field):
+        # "row" is a list representing one row from the CSV
+        # "field" should be a string in "expected_headers"
+        try:
+            return row[self.header_indices[field]]
+        except:
+            return None
+
+    def lead_from_row(self, row):
+        lead = {
+            'name': self.value_in_row(row, 'company'),
+            'url': self.value_in_row(row, 'url'),
+            'contacts': [],
+            'custom': {}
+        }
+
+        if self.value_in_row(row, 'status'):
+            lead['status'] = self.value_in_row(row, 'status')
+
+        if lead['url'] and '://' not in lead['url']:
+            lead['url'] = 'http://%s' % lead['url']
+
+        # custom fields
+        for field in self.custom_headers:
+            if self.value_in_row(row, field):
+                lead['custom'][field] = self.value_in_row(row, field)
+
+        # address
+        address = {}
+        if self.value_in_row(row, 'address'):
+            address['address'] = self.value_in_row(row, 'address')
+        elif self.value_in_row(row, 'address_1') or self.value_in_row(row, 'address_2'):
+            address['address'] = ('%s %s' % (self.value_in_row(row, 'address_1'), self.value_in_row(row, 'address_2'))).strip()
+        if self.value_in_row(row, 'city'):
+            address['city'] = self.value_in_row(row, 'city')
+        if self.value_in_row(row, 'state'):
+            address['state'] = self.value_in_row(row, 'state')
+        if self.value_in_row(row, 'zip'):
+            address['zipcode'] = self.value_in_row(row, 'zip')
+        if self.value_in_row(row, 'country'):
+            address['country'] = self.value_in_row(row, 'country')
+        if len(address):
+            lead['addresses'] = [address]
+
+        # contact
+        contact = {}
+        if self.value_in_row(row, 'contact'):
+            contact['name'] = self.value_in_row(row, 'contact')
+        if self.value_in_row(row, 'title'):
+            contact['title'] = self.value_in_row(row, 'title')
+
+        phones = []
+        if self.value_in_row(row, 'phone'):
+            phones.append({
+                'phone': self.value_in_row(row, 'phone'),
+                'type': 'office'
+            })
+        if self.value_in_row(row, 'mobile_phone'):
+            phones.append({
+                'phone': self.value_in_row(row, 'mobile_phone'),
+                'type': 'mobile'
+            })
+        if self.value_in_row(row, 'fax'):
+            phones.append({
+                'phone': self.value_in_row(row, 'fax'),
+                'type': 'fax'
+            })
+        if len(phones):
+            contact['phones'] = phones
+
+        emails = []
+        if self.value_in_row(row, 'email'):
+            emails.append({
+                'email': self.value_in_row(row, 'email'),
+                'type': 'office'
+            })
+        if len(emails):
+            contact['emails'] = emails
+
+        if len(contact):
+            lead['contacts'] = [contact]
+
+        return lead
+
