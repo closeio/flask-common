@@ -5,3 +5,4 @@ flask-mongoengine
 phonenumbers
 pycrypto
 padding
+Unidecode
