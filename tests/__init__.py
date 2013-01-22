@@ -6,8 +6,10 @@ import pytz
 
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
-from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, rng
+from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, SafeReferenceListField, rng
 from flask_common.formfields import BetterDateTimeField
+
+from mongoengine import ReferenceField
 
 from werkzeug.datastructures import MultiDict
 from wtforms import Form
@@ -36,6 +38,12 @@ class TestTrimmedFields(db.Document):
 
 class Secret(db.Document):
     password = EncryptedStringField(rng(32))
+
+class Book(db.Document):
+    pass
+
+class Author(db.Document):
+    books = SafeReferenceListField(ReferenceField(Book))
 
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
@@ -170,8 +178,29 @@ class SecretTestCase(unittest.TestCase):
         raw = col.find({'_id': s.id})[0]
         self.assertTrue('password' not in raw)
 
+class TestSafeReferenceListField(unittest.TestCase):
+    def test_safe_reference_list_field(self):
+        b1 = Book.objects.create()
+        b2 = Book.objects.create()
+
+        a = Author.objects.create(books=[b1, b2])
+        a.reload()
+        self.assertEqual(a.books, [b1, b2])
+
+        b1.delete()
+        a.reload()
+        self.assertEqual(a.books, [b2])
+
+        b3 = Book.objects.create()
+        a.books.append(b3)
+        a.save()
+        a.reload()
+        self.assertEqual(a.books, [b2, b3])
+
+        b2.delete()
+        b3.delete()
+        a.reload()
+        self.assertEqual(a.books, [])
 
 if __name__ == '__main__':
     unittest.main()
-
-
