@@ -1,8 +1,9 @@
 import pytz
-from mongoengine.fields import StringField, BinaryField
+from mongoengine.fields import StringField, BinaryField, ListField
 from phonenumbers import PhoneNumber
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 from bson import Binary
+from bson.dbref import DBRef
 from Crypto.Cipher import AES
 from Crypto import Random
 import Padding
@@ -133,3 +134,21 @@ class EncryptedStringField(BinaryField):
 
     def to_mongo(self, value):
         return value and self._encrypt(value) or None
+
+
+class SafeReferenceListField(ListField):
+    """
+    Like a ReferenceField, but doesn't return non-existing references when
+    dereferencing, i.e. no DBRefs are returned. This means that the next time
+    an object is saved, the non-existing references are removed and application
+    code can rely on having only valid dereferenced objects.
+
+    Must use ReferenceField as its field class.
+    """
+    def __get__(self, instance, owner):
+        result = super(SafeReferenceListField, self).__get__(instance, owner)
+        if instance is None:
+            return result
+        # modify the list in-place
+        result[:] = [obj for obj in result if not isinstance(obj, DBRef)]
+        return result
