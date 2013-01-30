@@ -180,3 +180,14 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
         msg.body = message
         current_app.mail.send(msg)
 
+
+def force_unicode(s):
+    # Return a unicode object, no matter what the string is.
+
+    if isinstance(s, unicode):
+        return s
+    try:
+        return s.decode('utf8')
+    except UnicodeDecodeError:
+        # most common encoding, conersion shouldn't fail
+        return s.decode('latin1')
