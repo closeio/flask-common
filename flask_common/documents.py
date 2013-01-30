@@ -9,6 +9,9 @@ from mongoengine.queryset import OperationError
 class RandomPKDocument(Document):
     id = StringField(unique=True, primary_key=True)
 
+    def __repr__(self):
+        return '<%s: %s>' % (self.__class__.__name__, self.id)
+
     def get_pk_prefix(self):
         return self._get_collection_name()[:4]
 
