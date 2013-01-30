@@ -170,7 +170,7 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
             '\n'.join(traceback.format_exception(*exc_info)),
         )
 
-    if not current_app.debug:
+    if current_app.debug:
         print subject
         print
         print message
