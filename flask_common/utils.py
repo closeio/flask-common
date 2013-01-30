@@ -170,15 +170,16 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
             '\n'.join(traceback.format_exception(*exc_info)),
         )
 
-    if current_app.debug:
-        print subject
-        print
-        print message
-    else:
-        from flask.ext.mail import Mail, Message
-        msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=current_app.config['ADMINS'])
-        msg.body = message
-        current_app.mail.send(msg)
+    if not current_app.testing:
+        if current_app.debug:
+            print subject
+            print
+            print message
+        else:
+            from flask.ext.mail import Mail, Message
+            msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=current_app.config['ADMINS'])
+            msg.body = message
+            current_app.mail.send(msg)
 
 
 def force_unicode(s):
