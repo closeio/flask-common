@@ -205,6 +205,12 @@ class TestSafeReferenceListField(unittest.TestCase):
 
 
 class ApplyRecursivelyTestCase(unittest.TestCase):
+    def test_none(self):
+        self.assertEqual(
+            apply_recursively(None, lambda n: n+1),
+            None
+        )
+
     def test_list(self):
         self.assertEqual(
             apply_recursively([1,2,3], lambda n: n+1),
