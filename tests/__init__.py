@@ -6,6 +6,7 @@ import pytz
 
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
+from flask_common.utils import apply_recursively
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, SafeReferenceListField, rng
 from flask_common.formfields import BetterDateTimeField
 
@@ -201,6 +202,27 @@ class TestSafeReferenceListField(unittest.TestCase):
         b3.delete()
         a.reload()
         self.assertEqual(a.books, [])
+
+
+class ApplyRecursivelyTestCase(unittest.TestCase):
+    def test_list(self):
+        self.assertEqual(
+            apply_recursively([1,2,3], lambda n: n+1),
+            [2,3,4]
+        )
+
+    def test_nested_tuple(self):
+        self.assertEqual(
+            apply_recursively([(1,2),(3,4)], lambda n: n+1),
+            [[2,3],[4,5]]
+        )
+
+    def test_nested_dict(self):
+        self.assertEqual(
+            apply_recursively([{'a': 1, 'b': [2,3], 'c': { 'd': 4, 'e': None }}, 5], lambda n: n+1),
+            [{'a': 2, 'b': [3,4], 'c': { 'd': 5, 'e': None }}, 6]
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
