@@ -109,7 +109,7 @@ def utctoday():
     return today
 
 
-def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
+def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
     from socket import gethostname
     import traceback, sys
     from flask import current_app, request
@@ -159,6 +159,8 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
             '\n'.join(traceback.format_exception(*exc_info)),
         )
 
+    recipients = recipients if recipients else current_app.config['ADMINS']
+
     if not current_app.testing:
         if current_app.debug:
             print subject
@@ -166,7 +168,7 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None):
             print message
         else:
             from flask.ext.mail import Mail, Message
-            msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=current_app.config['ADMINS'])
+            msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=recipients)
             msg.body = message
             current_app.mail.send(msg)
 
