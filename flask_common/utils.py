@@ -181,3 +181,14 @@ def force_unicode(s):
     except UnicodeDecodeError:
         # most common encoding, conersion shouldn't fail
         return s.decode('latin1')
+
+# Applies a function to objects by traversing lists/tuples/dicts recursively.
+def apply_recursively(obj, f):
+    if isinstance(obj, (list, tuple)):
+        return [apply_recursively(item, f) for item in obj]
+    elif isinstance(obj, dict):
+        return {k: apply_recursively(v, f) for k, v in obj.iteritems()}
+    elif obj == None:
+        return None
+    else:
+        return f(obj)
