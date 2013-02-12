@@ -109,6 +109,13 @@ def utctoday():
     return today
 
 
+def localtoday(tz):
+    import pytz
+    local_now = tz.normalize(pytz.utc.localize(datetime.datetime.utcnow()).astimezone(tz))
+    local_today = datetime.date(*local_now.timetuple()[:3])
+    return local_today
+
+
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
     from socket import gethostname
     import traceback, sys
