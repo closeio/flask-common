@@ -1,5 +1,5 @@
 import pytz
-from mongoengine.fields import StringField, BinaryField, ListField
+from mongoengine.fields import ReferenceField, StringField, BinaryField, ListField
 from phonenumbers import PhoneNumber
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 from bson import Binary
@@ -138,7 +138,7 @@ class EncryptedStringField(BinaryField):
 
 class SafeReferenceListField(ListField):
     """
-    Like a ReferenceField, but doesn't return non-existing references when
+    Like a ListField, but doesn't return non-existing references when
     dereferencing, i.e. no DBRefs are returned. This means that the next time
     an object is saved, the non-existing references are removed and application
     code can rely on having only valid dereferenced objects.
@@ -151,4 +151,20 @@ class SafeReferenceListField(ListField):
             return result
         # modify the list in-place
         result[:] = [obj for obj in result if not isinstance(obj, DBRef)]
+        return result
+
+
+class SafeReferenceField(ReferenceField):
+    """
+    Like a ReferenceField, but doesn't return non-existing references when
+    dereferencing, i.e. no DBRefs are returned. This means that the next time
+    an object is saved, the non-existing references are removed and application
+    code can rely on having only valid dereferenced objects.
+    """
+    def __get__(self, instance, owner):
+        result = super(SafeReferenceField, self).__get__(instance, owner)
+        if isinstance(result, DBRef):
+            instance._data[self.name] = None
+            instance._mark_as_changed(self.name)
+            return None
         return result
