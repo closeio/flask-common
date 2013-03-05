@@ -131,7 +131,7 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
     if context:
         message += 'Context:\n\n'
         try:
-            message += '\n'.join(['%s: %s' % (k, v) for k, v in context.iteritems()])
+            message += '\n'.join(['%s: %s' % (k, context[k]) for k in sorted(context.keys())])
         except:
             message += 'Error reporting context.'
         message += '\n\n\n\n'
@@ -145,7 +145,7 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
             stack.append(tb.tb_frame)
             tb = tb.tb_next
 
-        message = "Locals by frame, innermost last:\n"
+        message += "Locals by frame, innermost last:\n"
 
         for frame in stack:
             message += "\nFrame %s in %s at line %s\n" % (frame.f_code.co_name,
