@@ -61,10 +61,12 @@ class PhoneField(StringField):
 
         # strip empty extension
         if parsed.country_code == 1 and len(str(parsed.national_number)) > 10:
-            regex = re.compile('.+\s*e?xt?.?\s*$')
+            regex = re.compile('.+\s*e?xt?\.?\s*$')
             if regex.match(value):
-                value = re.sub('\s*e?xt?.?\s*$', '', value)
-                parsed = parse(value, 'US')
+                value = re.sub('\s*e?xt?\.?\s*$', '', value)
+                new_parsed = parse(value, 'US')
+                if len(str(new_parsed)) >= 10:
+                    parsed = new_parsed
 
         return parsed
 
