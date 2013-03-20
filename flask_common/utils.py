@@ -237,9 +237,10 @@ import time
 
 class Timer(object):
     def __enter__(self):
-        self.start = time.clock()
+        self.start = datetime.datetime.utcnow()
         return self
 
     def __exit__(self, *args):
-        self.end = time.clock()
-        self.interval = self.end - self.start
+        self.end = datetime.datetime.utcnow()
+        delta = (self.end - self.start)
+        self.interval = delta.days * 86400 + delta.seconds + delta.microseconds / 1000000.
