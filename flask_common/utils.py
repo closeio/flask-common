@@ -1,7 +1,9 @@
 import re
 import csv
 import base64
+import codecs
 import datetime
+import cStringIO
 import unidecode
 from logging.handlers import SMTPHandler
 
@@ -100,6 +102,35 @@ class CsvReader(object):
         row = self.reader.next()
         return [unicode(s, "utf-8", errors='ignore').replace("\"", "").strip() for s in row]
 
+class CsvWriter:
+    """
+    A CSV writer which will write rows to CSV file "f",
+    which is encoded in the given encoding.
+    From http://docs.python.org/2/library/csv.html
+    """
+    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+        # Redirect output to a queue
+        self.queue = cStringIO.StringIO()
+        self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
+        self.stream = f
+        self.encoder = codecs.getincrementalencoder(encoding)()
+
+    def writerow(self, row):
+        self.writer.writerow([s.encode("utf-8") for s in row])
+        # Fetch UTF-8 output from the queue ...
+        data = self.queue.getvalue()
+        data = data.decode("utf-8")
+        # ... and reencode it into the target encoding
+        data = self.encoder.encode(data)
+        # write to the target stream
+        self.stream.write(data)
+        # empty queue
+        self.queue.truncate(0)
+
+    def writerows(self, rows):
+        for row in rows:
+            self.writerow(row)
+
 def smart_unicode(s, encoding='utf-8', errors='strict'):
     if isinstance(s, unicode):
         return s
@@ -151,7 +182,7 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
     if context:
         message += 'Context:\n\n'
         try:
-            message += '\n'.join(['%s: %s' % (k, v) for k, v in context.iteritems()])
+            message += '\n'.join(['%s: %s' % (k, context[k]) for k in sorted(context.keys())])
         except:
             message += 'Error reporting context.'
         message += '\n\n\n\n'
@@ -165,7 +196,7 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
             stack.append(tb.tb_frame)
             tb = tb.tb_next
 
-        message = "Locals by frame, innermost last:\n"
+        message += "Locals by frame, innermost last:\n"
 
         for frame in stack:
             message += "\nFrame %s in %s at line %s\n" % (frame.f_code.co_name,
@@ -211,6 +242,10 @@ def force_unicode(s):
         # most common encoding, conersion shouldn't fail
         return s.decode('latin1')
 
+def slugify(str, separator='_'):
+    str = unidecode.unidecode(str).lower().strip()
+    return re.sub(r'\W+', separator, str).strip(separator)
+
 # Applies a function to objects by traversing lists/tuples/dicts recursively.
 def apply_recursively(obj, f):
     if isinstance(obj, (list, tuple)):
@@ -221,3 +256,15 @@ def apply_recursively(obj, f):
         return None
     else:
         return f(obj)
+
+import time
+
+class Timer(object):
+    def __enter__(self):
+        self.start = datetime.datetime.utcnow()
+        return self
+
+    def __exit__(self, *args):
+        self.end = datetime.datetime.utcnow()
+        delta = (self.end - self.start)
+        self.interval = delta.days * 86400 + delta.seconds + delta.microseconds / 1000000.

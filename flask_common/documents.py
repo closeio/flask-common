@@ -80,7 +80,7 @@ def fetch_related(objs, field_dict, cache_map=None):
     Sample usage:
 
     fetch_related(objs, {
-        'user': True, # for search_attributes called_by
+        'user': True,
         'lead': {
             'created_by': True,
             'updated_by': True,

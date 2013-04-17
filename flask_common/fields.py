@@ -1,3 +1,4 @@
+import re
 import pytz
 from mongoengine.fields import ReferenceField, StringField, BinaryField, ListField
 from phonenumbers import PhoneNumber
@@ -56,7 +57,18 @@ class PhoneField(StringField):
     """
 
     def _parse(self, value):
-        return parse(value, 'US')
+        parsed = parse(value, 'US')
+
+        # strip empty extension
+        if parsed.country_code == 1 and len(str(parsed.national_number)) > 10:
+            regex = re.compile('.+\s*e?xt?\.?\s*$')
+            if regex.match(value):
+                value = re.sub('\s*e?xt?\.?\s*$', '', value)
+                new_parsed = parse(value, 'US')
+                if len(str(new_parsed)) >= 10:
+                    parsed = new_parsed
+
+        return parsed
 
     def __set__(self, instance, value):
         value = self.to_python(value)
