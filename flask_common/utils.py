@@ -67,18 +67,38 @@ def utf_8_encoder(unicode_csv_data):
 
 """
 Wrapper around csv reader that ignores non utf-8 chars and strips the record
+Taken from http://docs.python.org/2/library/csv.html
 """
+class UTF8Recoder(object):
+    """
+    Iterator that reads an encoded stream and reencodes the input to UTF-8
+    """
+    def __init__(self, f, encoding):
+        self.reader = codecs.getreader(encoding)(f)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self.reader.next().encode("utf-8")
+
 class CsvReader(object):
-    def __init__(self, file_name, delimiter=','):
-        self.reader = csv.reader(open(file_name, 'rbU'), delimiter=delimiter)
+    """
+    A CSV reader which will iterate over lines in the CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+        f = open(f, 'rb')
+        f = UTF8Recoder(f, encoding)
+        self.reader = csv.reader(f, dialect=dialect, **kwds)
 
     def __iter__(self):
         return self
 
     def next(self):
         row = self.reader.next()
-        row = [el.decode('utf8', errors='ignore').replace('\"', '').strip() for el in row]
-        return row
+        return [unicode(s, "utf-8", errors='ignore').replace("\"", "").strip() for s in row]
 
 def smart_unicode(s, encoding='utf-8', errors='strict'):
     if isinstance(s, unicode):
