@@ -237,14 +237,125 @@ def apply_recursively(obj, f):
     else:
         return f(obj)
 
+
 import time
+import signal
+
+class Timeout(Exception):
+    pass
 
 class Timer(object):
+    # Timer class with an optional signal timer.
+    # Raises a Timeout exception when the timeout occurs.
+    # When using timeouts, you must not nest this function nor call it in
+    # any thread other than the main thread.
+
+    def __init__(self, timeout=None, timeout_message=''):
+        self.timeout = timeout
+        self.timeout_message = timeout_message
+
+        if timeout:
+            signal.signal(signal.SIGALRM, self._alarm_handler)
+
+    def _alarm_handler(self, signum, frame):
+        signal.signal(signal.SIGALRM, signal.SIG_IGN)
+        raise Timeout(self.timeout_message)
+
     def __enter__(self):
+        if self.timeout:
+            signal.alarm(self.timeout)
         self.start = datetime.datetime.utcnow()
         return self
 
     def __exit__(self, *args):
+        self.end = datetime.datetime.utcnow()
+        delta = (self.end - self.start)
+        self.interval = delta.days * 86400 + delta.seconds + delta.microseconds / 1000000.
+        if self.timeout:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
+
+import threading
+
+# Semaphore implementation from Python 3 which supports timeouts.
+class Semaphore(threading._Verbose):
+
+    # After Tim Peters' semaphore class, but not quite the same (no maximum)
+
+    def __init__(self, value=1, verbose=None):
+        if value < 0:
+            raise ValueError("semaphore initial value must be >= 0")
+        threading._Verbose.__init__(self, verbose)
+        self._cond = threading.Condition(threading.Lock())
+        self._value = value
+
+    def acquire(self, blocking=True, timeout=None):
+        if not blocking and timeout is not None:
+            raise ValueError("can't specify timeout for non-blocking acquire")
+        rc = False
+        endtime = None
+        self._cond.acquire()
+        while self._value == 0:
+            if not blocking:
+                break
+            if __debug__:
+                self._note("%s.acquire(%s): blocked waiting, value=%s",
+                           self, blocking, self._value)
+            if timeout is not None:
+                if endtime is None:
+                    endtime = threading._time() + timeout
+                else:
+                    timeout = endtime - threading._time()
+                    if timeout <= 0:
+                        break
+            self._cond.wait(timeout)
+        else:
+            self._value = self._value - 1
+            if __debug__:
+                self._note("%s.acquire: success, value=%s",
+                           self, self._value)
+            rc = True
+        self._cond.release()
+        return rc
+
+    __enter__ = acquire
+
+    def release(self):
+        self._cond.acquire()
+        self._value = self._value + 1
+        if __debug__:
+            self._note("%s.release: success, value=%s",
+                       self, self._value)
+        self._cond.notify()
+        self._cond.release()
+
+    def __exit__(self, t, v, tb):
+        self.release()
+
+
+class ThreadedTimer(object):
+    # Timer class with an optional threaded timer.
+    # By default, interrupts the main thread with a KeyboardInterrupt.
+
+    def __init__(self, timeout=None, on_timeout=None):
+        self.timeout = timeout
+        self.on_timeout = on_timeout or self._timeout_handler
+
+    def _timeout_handler(self):
+        import thread
+        thread.interrupt_main()
+
+    def __enter__(self):
+        if self.timeout:
+            self._timer = threading.Timer(self.timeout, self.on_timeout)
+            self._timer.start()
+        self.start = datetime.datetime.utcnow()
+        return self
+
+    def __exit__(self, *args):
+        if self.timeout:
+            self._timer.cancel()
         self.end = datetime.datetime.utcnow()
         delta = (self.end - self.start)
         self.interval = delta.days * 86400 + delta.seconds + delta.microseconds / 1000000.
