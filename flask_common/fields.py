@@ -7,6 +7,7 @@ from bson import Binary
 from bson.dbref import DBRef
 from Crypto.Cipher import AES
 from Crypto import Random
+from blist import sortedset
 import Padding
 
 
@@ -47,6 +48,43 @@ class TimezoneField(StringField):
 
     def to_mongo(self, value):
         return unicode(value)
+
+
+class SortedSetField(ListField):
+    """Like a ListField but sorts and de-duplicates items in the list before
+    writing to the database in order to ensure that a sorted list is always retrieved.
+
+    key = key to sort by
+
+    .. warning::
+        There is a potential race condition when handling lists.  If you set /
+        save the whole list then other processes trying to save the whole list
+        as well could overwrite changes.  The safest way to append to a list is
+        to perform a push operation.
+    """
+
+    _key = None
+    set_class = sortedset
+
+    def __init__(self, field, **kwargs):
+        if 'key' in kwargs.keys():
+            self._key = kwargs.pop('key')
+        super(SortedSetField, self).__init__(field, **kwargs)
+
+    def to_mongo(self, value):
+        value = super(SortedSetField, self).to_mongo(value)
+        if self._key is not None:
+            return list(self.set_class(value, key=self._key))
+        else:
+            return list(self.set_class(value))
+
+
+class isortedset(sortedset):
+    def __contains__(self, key):
+        return super(isortedset, self).__contains__(key.lower())
+
+class ISortedSetField(SortedSetField):
+    set_class = isortedset
 
 
 class PhoneField(StringField):
