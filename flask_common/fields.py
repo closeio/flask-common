@@ -79,9 +79,11 @@ class SortedSetField(ListField):
             return list(self.set_class(value))
 
 
+# Make faster
+# https://github.com/DanielStutzbach/blist/issues/50
 class isortedset(sortedset):
     def __contains__(self, key):
-        return super(isortedset, self).__contains__(key.lower())
+        return key.lower() in (n.lower() for n in self)
 
 class ISortedSetField(SortedSetField):
     set_class = isortedset
