@@ -86,6 +86,10 @@ class isortedset(sortedset):
 class ISortedSetField(SortedSetField):
     set_class = isortedset
 
+    def __init__(self, field, **kwargs):
+        kwargs['key'] = lambda s: s.lower()
+        super(ISortedSetField, self).__init__(field, **kwargs)
+
 
 class PhoneField(StringField):
     """
