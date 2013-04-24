@@ -1,12 +1,16 @@
 import re
 import csv
-import base64
 import codecs
 import datetime
 import cStringIO
 import unidecode
+from blist import sortedset
 from logging.handlers import SMTPHandler
 
+# TODO Make faster - https://github.com/DanielStutzbach/blist/issues/50
+class isortedset(sortedset):
+    def __contains__(self, key):
+        return key.lower() in (n.lower() for n in self)
 
 class DetailedSMTPHandler(SMTPHandler):
     def __init__(self, app_name, *args, **kwargs):
