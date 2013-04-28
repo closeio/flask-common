@@ -53,6 +53,14 @@ class ModelConverter(AdminModelConverter):
     def conv_TrimmedString(self, model, field, kwargs):
         return self.conv_String(model, field, kwargs)
 
+    @converts('IUniqueStringField')
+    def conv_IUniqueString(self, model, field, kwargs):
+        return self.conv_String(model, field, kwargs)
+
+    @converts('IUniqueEmailField')
+    def conv_IUniqueEmail(self, model, field, kwargs):
+        return self.conv_String(model, field, kwargs)
+
     @converts('DateTimeField')
     def conv_DateTime(self, model, field, kwargs):
         return BetterDateTimeField(**kwargs)
