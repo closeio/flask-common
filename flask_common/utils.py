@@ -372,3 +372,9 @@ class ThreadedTimer(object):
         self.end = datetime.datetime.utcnow()
         delta = (self.end - self.start)
         self.interval = delta.days * 86400 + delta.seconds + delta.microseconds / 1000000.
+
+
+def uniqify(seq):
+    # preserves order
+    seen = set()
+    return [ x for x in seq if x not in seen and not seen.add(x)]
