@@ -1,6 +1,6 @@
 import re
 import pytz
-from mongoengine.fields import ReferenceField, StringField, BinaryField, ListField
+from mongoengine.fields import ReferenceField, StringField, BinaryField, ListField, EmailField
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 from flask.ext.common.utils import isortedset
 from bson import Binary
@@ -32,6 +32,26 @@ class TrimmedStringField(StringField):
 
     def to_mongo(self, value):
         return self.to_python(value)
+
+
+
+class LowerStringField(StringField):
+    def __set__(self, instance, value):
+        value = self.to_python(value)
+        return super(LowerStringField, self).__set__(instance, value)
+
+    def to_python(self, value):
+        if value:
+            value = value.lower()
+        return value
+
+
+class LowerEmailField(LowerStringField):
+
+    def validate(self, value):
+        if not EmailField.EMAIL_REGEX.match(value):
+            self.error('Invalid Mail-address: %s' % value)
+        super(LowerEmailField, self).validate(value)
 
 
 class TimezoneField(StringField):
