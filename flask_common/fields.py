@@ -34,7 +34,6 @@ class TrimmedStringField(StringField):
         return self.to_python(value)
 
 
-
 class LowerStringField(StringField):
     def __set__(self, instance, value):
         value = self.to_python(value)
@@ -44,6 +43,9 @@ class LowerStringField(StringField):
         if value:
             value = value.lower()
         return value
+
+    def prepare_query_value(self, op, value):
+        return value and value.lower()
 
 
 class LowerEmailField(LowerStringField):
