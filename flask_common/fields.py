@@ -45,7 +45,8 @@ class LowerStringField(StringField):
         return value
 
     def prepare_query_value(self, op, value):
-        return value and value.lower()
+        value = value.lower() if value else value
+        return super(LowerStringField, self).prepare_query_value(op, value)
 
 
 class LowerEmailField(LowerStringField):
