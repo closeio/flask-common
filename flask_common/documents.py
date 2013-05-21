@@ -1,7 +1,7 @@
 import os
 import datetime
 from zbase62 import zbase62
-from mongoengine import * 
+from mongoengine import *
 from mongoengine.base import ValidationError
 from mongoengine.queryset import OperationError
 
@@ -40,7 +40,7 @@ class RandomPKDocument(Document):
             # StringField had a unique constraint someone could inject that
             # string into the error message.
             if unicode(err).startswith(u'Tried to save duplicate unique keys (E11000 duplicate key error index: %s.%s.$_id_ ' % (self._get_db().name, self._get_collection_name())):
-                self.save(*args, **kwargs)            
+                return self.save(*args, **kwargs)
             else:
                 raise
 
