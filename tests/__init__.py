@@ -179,6 +179,12 @@ class SecretTestCase(unittest.TestCase):
         raw = col.find({'_id': s.id})[0]
         self.assertTrue('password' not in raw)
 
+        # Test long password
+        s = Secret(password='0123456789123456789')
+        s.save()
+        s.reload()
+        self.assertEqual(s.password, '0123456789123456789')
+
 class TestSafeReferenceListField(unittest.TestCase):
     def test_safe_reference_list_field(self):
         b1 = Book.objects.create()
