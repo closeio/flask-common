@@ -3,6 +3,8 @@ import unittest
 import datetime
 from dateutil.tz import tzutc
 import pytz
+import string
+import random
 
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
@@ -179,17 +181,13 @@ class SecretTestCase(unittest.TestCase):
         raw = col.find({'_id': s.id})[0]
         self.assertTrue('password' not in raw)
 
-        # Test long password
-        s = Secret(password='0123456789123456789')
-        s.save()
-        s.reload()
-        self.assertEqual(s.password, '0123456789123456789')
-
-        # Test password with exactly IV_SIZE characters
-        s = Secret(password='a' * EncryptedStringField.IV_SIZE)
-        s.save()
-        s.reload()
-        self.assertEqual(s.password, 'a' * EncryptedStringField.IV_SIZE)
+        # Test passwords of various lengths
+        for pw_len in range(1, 50):
+            pw = ''.join(random.choice(string.ascii_letters + string.digits) for x in range(pw_len))
+            s = Secret(password=pw)
+            s.save()
+            s.reload()
+            self.assertEqual(s.password, pw)
 
 class TestSafeReferenceListField(unittest.TestCase):
     def test_safe_reference_list_field(self):

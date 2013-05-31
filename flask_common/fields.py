@@ -200,9 +200,10 @@ class EncryptedStringField(BinaryField):
 
     def _decrypt(self, data):
         iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
-        if len(iv) < self.IV_SIZE or not len(cipher) or len(cipher) % self.IV_SIZE != 0:
+        try:
+            return Padding.removePadding(AES.new(self.key, AES.MODE_CBC, iv).decrypt(cipher))
+        except:
             return data
-        return Padding.removePadding(AES.new(self.key, AES.MODE_CBC, iv).decrypt(cipher))
 
     def to_python(self, value):
         return value and self._decrypt(value) or None
