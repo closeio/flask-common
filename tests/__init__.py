@@ -185,6 +185,12 @@ class SecretTestCase(unittest.TestCase):
         s.reload()
         self.assertEqual(s.password, '0123456789123456789')
 
+        # Test password with exactly IV_SIZE characters
+        s = Secret(password='a' * EncryptedStringField.IV_SIZE)
+        s.save()
+        s.reload()
+        self.assertEqual(s.password, 'a' * EncryptedStringField.IV_SIZE)
+
 class TestSafeReferenceListField(unittest.TestCase):
     def test_safe_reference_list_field(self):
         b1 = Book.objects.create()
