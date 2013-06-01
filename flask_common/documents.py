@@ -103,9 +103,9 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     # Determine what IDs we want to fetch
     for field_name, sub_field_dict in field_dict.iteritems():
-        refs = [obj._data[field_name] for obj in objs if isinstance(obj._data[field_name], DBRef)]
+        refs = [getattr(obj, field_name) for obj in objs if getattr(getattr(obj, field_name), '_lazy', False)]
         if refs:
-            document_class = getattr(objs[0].__class__, field_name).document_type
+            document_class = objs[0].__class__._fields[field_name].document_type
 
             if not document_class in cache_map:
                 rel_obj_map = cache_map[document_class] = {}
@@ -130,7 +130,7 @@ def fetch_related(objs, field_dict, cache_map=None):
     # Assign objects
     for field_name, sub_field_dict in field_dict.iteritems():
         if objs:
-            document_class = getattr(objs[0].__class__, field_name).document_type
+            document_class = objs[0].__class__._fields[field_name].document_type
 
             rel_obj_map = cache_map.get(document_class)
             if rel_obj_map:
@@ -139,8 +139,8 @@ def fetch_related(objs, field_dict, cache_map=None):
                     fetch_related(rel_obj_map.values(), sub_field_dict)
 
                 for obj in objs:
-                    val = obj._data[field_name]
-                    if val and isinstance(val, DBRef):
+                    val = getattr(obj, field_name)
+                    if val and val._lazy:
                         rel_obj = rel_obj_map.get(val.id)
                         if rel_obj:
-                            obj._data[field_name] = rel_obj
+                            setattr(obj, field_name, rel_obj)
