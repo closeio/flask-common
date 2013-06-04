@@ -11,6 +11,7 @@ from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.utils import apply_recursively, isortedset
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, SafeReferenceListField, LowerStringField, LowerEmailField, rng
 from flask_common.formfields import BetterDateTimeField
+from flask_common.documents import RandomPKDocument, DocumentBase
 
 from mongoengine import ReferenceField
 
@@ -47,6 +48,20 @@ class Book(db.Document):
 
 class Author(db.Document):
     books = SafeReferenceListField(ReferenceField(Book))
+
+class DocTestCase(unittest.TestCase):
+
+    def test_cls_inheritance(self):
+        """ Make sure _cls is not appended to queries and indexes and that
+        allow_inheritance is disabled by default for docs inheriting from
+        RandomPKDoc and DocumentBase
+        """
+
+        class Doc(DocumentBase, RandomPKDocument):
+            text = TrimmedStringField()
+
+        self.assertEqual(Doc.objects.filter(text='')._query, {'text': ''})
+        self.assertFalse(Doc._meta['allow_inheritance'])
 
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
