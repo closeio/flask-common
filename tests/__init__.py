@@ -7,10 +7,10 @@ import pytz
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.utils import apply_recursively, isortedset
-from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, SafeReferenceListField, LowerStringField, LowerEmailField, rng
+from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, LowerStringField, LowerEmailField, rng
 from flask_common.formfields import BetterDateTimeField
 
-from mongoengine import ReferenceField
+from mongoengine import ReferenceField, SafeReferenceListField
 
 from werkzeug.datastructures import MultiDict
 from wtforms import Form
@@ -179,6 +179,7 @@ class SecretTestCase(unittest.TestCase):
         raw = col.find({'_id': s.id})[0]
         self.assertTrue('password' not in raw)
 
+# TODO: move to mongomallard
 class TestSafeReferenceListField(unittest.TestCase):
     def test_safe_reference_list_field(self):
         b1 = Book.objects.create()
