@@ -45,7 +45,6 @@ class RandomPKDocument(Document):
                 raise
 
     meta = {
-        'allow_inheritance': True,
         'abstract': True,
     }
 
@@ -67,7 +66,6 @@ class DocumentBase(Document):
         return super(DocumentBase, self).save(*args, **kwargs)
 
     meta = {
-        'allow_inheritance': True,
         'abstract': True,
     }
 

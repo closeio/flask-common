@@ -173,6 +173,7 @@ class EncryptedStringField(BinaryField):
         Key: 32 byte binary string containing the 256 bit AES key
         """
         self.key = key
+        self.to_python_on_init = False
         return super(EncryptedStringField, self).__init__(*args, **kwargs)
 
     def _encrypt(self, data):
@@ -182,8 +183,6 @@ class EncryptedStringField(BinaryField):
 
     def _decrypt(self, data):
         iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
-        if len(iv) < self.IV_SIZE:
-            return data
         return Padding.removePadding(AES.new(self.key, AES.MODE_CBC, iv).decrypt(cipher))
 
     def to_python(self, value):

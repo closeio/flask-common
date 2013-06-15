@@ -3,12 +3,15 @@ import unittest
 import datetime
 from dateutil.tz import tzutc
 import pytz
+import string
+import random
 
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.utils import apply_recursively, isortedset
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, LowerStringField, LowerEmailField, rng
 from flask_common.formfields import BetterDateTimeField
+from flask_common.documents import RandomPKDocument, DocumentBase
 
 from mongoengine import ReferenceField, SafeReferenceListField
 
@@ -45,6 +48,20 @@ class Book(db.Document):
 
 class Author(db.Document):
     books = SafeReferenceListField(ReferenceField(Book))
+
+class DocTestCase(unittest.TestCase):
+
+    def test_cls_inheritance(self):
+        """ Make sure _cls is not appended to queries and indexes and that
+        allow_inheritance is disabled by default for docs inheriting from
+        RandomPKDoc and DocumentBase
+        """
+
+        class Doc(DocumentBase, RandomPKDocument):
+            text = TrimmedStringField()
+
+        self.assertEqual(Doc.objects.filter(text='')._query, {'text': ''})
+        self.assertFalse(Doc._meta['allow_inheritance'])
 
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
@@ -179,7 +196,14 @@ class SecretTestCase(unittest.TestCase):
         raw = col.find({'_id': s.id})[0]
         self.assertTrue('password' not in raw)
 
-# TODO: move to mongomallard
+        # Test passwords of various lengths
+        for pw_len in range(1, 50):
+            pw = ''.join(random.choice(string.ascii_letters + string.digits) for x in range(pw_len))
+            s = Secret(password=pw)
+            s.save()
+            s.reload()
+            self.assertEqual(s.password, pw)
+
 class TestSafeReferenceListField(unittest.TestCase):
     def test_safe_reference_list_field(self):
         b1 = Book.objects.create()
