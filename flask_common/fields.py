@@ -3,12 +3,10 @@ import pytz
 from mongoengine.fields import ReferenceField, StringField, BinaryField, ListField, EmailField
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 from flask.ext.common.utils import isortedset
+from flask.ext.common.crypto import aes_encrypt, aes_decrypt, AuthenticationError
 from bson import Binary
 from bson.dbref import DBRef
-from Crypto.Cipher import AES
-from Crypto import Random
 from blist import sortedset
-import Padding
 
 
 class TrimmedStringField(StringField):
@@ -156,8 +154,6 @@ class PhoneField(StringField):
         return self.to_raw_phone(value)
 
 
-rng = Random.new().read
-
 class EncryptedStringField(BinaryField):
     """
     Encrypted string field. Uses AES256 bit encryption with a different 128 bit
@@ -173,17 +169,20 @@ class EncryptedStringField(BinaryField):
         Key: 32 byte binary string containing the 256 bit AES key
         """
         self.key = key
-        self.to_python_on_init = False
         return super(EncryptedStringField, self).__init__(*args, **kwargs)
 
     def _encrypt(self, data):
-        iv = rng(self.IV_SIZE)
-        ret = Binary(iv + AES.new(self.key, AES.MODE_CBC, iv).encrypt(Padding.appendPadding(data)))
-        return ret
+        return Binary(aes_encrypt(self.key, data))
 
     def _decrypt(self, data):
-        iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
-        return Padding.removePadding(AES.new(self.key, AES.MODE_CBC, iv).decrypt(cipher))
+        try:
+            return aes_decrypt(self.key, data)
+        except AuthenticationError:
+            # TODO: remove insecure encryption once migrated
+            from Crypto.Cipher import AES
+            import Padding
+            iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
+            return Padding.removePadding(AES.new(self.key, AES.MODE_CBC, iv).decrypt(cipher))
 
     def to_python(self, value):
         return value and self._decrypt(value) or None
