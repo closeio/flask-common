@@ -7,19 +7,6 @@ import unidecode
 from blist import sortedset
 from logging.handlers import SMTPHandler
 
-def render_pdf(html):
-    """mimerender helper to render a PDF from HTML using xhtml2pdf.
-
-    Usage: http://philfreo.com/blog/render-a-pdf-from-html-using-xhtml2pdf-and-mimerender-in-flask/
-    """
-    from xhtml2pdf import pisa
-    from cStringIO import StringIO
-    pdf = StringIO()
-    pisa.CreatePDF(StringIO(html.encode('utf-8')), pdf)
-    resp = pdf.getvalue()
-    pdf.close()
-    return resp
-
 class isortedset(sortedset):
     def __init__(self, *args, **kwargs):
         if not kwargs.get('key'):
