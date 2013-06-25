@@ -236,7 +236,9 @@ def force_unicode(s):
         return s.decode('latin1')
 
 def slugify(str, separator='_'):
-    str = unidecode.unidecode(str).lower().strip()
+    if isinstance(str, unicode):
+        str = unidecode.unidecode(str)
+    str = str.lower().strip()
     return re.sub(r'\W+', separator, str).strip(separator)
 
 # Applies a function to objects by traversing lists/tuples/dicts recursively.
