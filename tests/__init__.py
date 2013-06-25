@@ -358,7 +358,7 @@ class TestLowerField(unittest.TestCase):
 class SlugifyTestCase(unittest.TestCase):
     def test_slugify(self):
         self.assertEqual(slugify('  Foo  ???BAR\t\n\r'), 'foo_bar')
-        self.assertEqual(slugify(u'äąéöóü'), 'aaeoou')
+        self.assertEqual(slugify(u'äąé öóü', '-'), 'aae-oou')
 
 if __name__ == '__main__':
     unittest.main()
