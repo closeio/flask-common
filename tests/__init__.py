@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 import datetime
@@ -9,7 +10,7 @@ import random
 from flask import Flask
 from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.crypto import aes_generate_key
-from flask_common.utils import apply_recursively, isortedset
+from flask_common.utils import apply_recursively, isortedset, slugify
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, LowerStringField, LowerEmailField
 from flask_common.formfields import BetterDateTimeField
 from flask_common.documents import RandomPKDocument, DocumentBase
@@ -353,6 +354,11 @@ class TestLowerField(unittest.TestCase):
 
         self.assertTrue(obj in Test.objects.filter(embedded__email__in=['VALID@EMAIL.COM', 'whatever']))
 
+
+class SlugifyTestCase(unittest.TestCase):
+    def test_slugify(self):
+        self.assertEqual(slugify('  Foo  ???BAR\t\n\r'), 'foo_bar')
+        self.assertEqual(slugify(u'äąéöóü'), 'aaeoou')
 
 if __name__ == '__main__':
     unittest.main()

@@ -235,11 +235,11 @@ def force_unicode(s):
         # most common encoding, conersion shouldn't fail
         return s.decode('latin1')
 
-def slugify(str, separator='_'):
-    if isinstance(str, unicode):
-        str = unidecode.unidecode(str)
-    str = str.lower().strip()
-    return re.sub(r'\W+', separator, str).strip(separator)
+def slugify(text, separator='_'):
+    if isinstance(text, unicode):
+        text = unidecode.unidecode(text)
+    text = text.lower().strip()
+    return re.sub(r'\W+', separator, text).strip(separator)
 
 # Applies a function to objects by traversing lists/tuples/dicts recursively.
 def apply_recursively(obj, f):
