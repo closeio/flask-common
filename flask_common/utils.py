@@ -95,6 +95,15 @@ class CsvReader(object):
         row = [el.decode('utf8', errors='ignore').replace('\"', '').strip() for el in row]
         return row
 
+class NamedCsvReader(CsvReader):
+    def __init__(self, *args, **kwargs):
+        super(NamedCsvReader, self).__init__(*args, **kwargs)
+        self.headers = super(NamedCsvReader, self).next()
+    
+    def next(self):
+        row = super(NamedCsvReader, self).next()
+        return dict(zip(self.headers, row))
+
 class CsvWriter:
     """
     A CSV writer which will write rows to CSV file "f",
