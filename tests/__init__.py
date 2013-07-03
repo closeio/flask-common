@@ -13,7 +13,7 @@ from flask_common.crypto import aes_generate_key
 from flask_common.utils import apply_recursively, isortedset, slugify
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, LowerStringField, LowerEmailField
 from flask_common.formfields import BetterDateTimeField
-from flask_common.documents import RandomPKDocument, DocumentBase
+from flask_common.documents import RandomPKDocument, DocumentBase, SoftDeleteDocument
 
 from mongoengine import ReferenceField, SafeReferenceListField
 
@@ -65,6 +65,42 @@ class DocTestCase(unittest.TestCase):
         self.assertEqual(Doc.objects.filter(text='')._query, {'text': ''})
         self.assertFalse(Doc._meta['allow_inheritance'])
 
+class SoftDeleteTestCase(unittest.TestCase):
+    class Person(DocumentBase, RandomPKDocument, SoftDeleteDocument):
+        name = TrimmedStringField()
+
+        meta = {
+            'allow_inheritance': True,
+        }
+
+    class Programmer(Person):
+        langauge = TrimmedStringField()
+
+    def setUp(self):
+        self.Person.drop_collection()
+        self.Programmer.drop_collection()
+
+    def test_queryset_manager(self):
+        a = self.Person.objects.create(name='Anthony')
+        self.assertEqual(len(self.Person.objects.all()), 1)
+        a.delete()
+        self.assertEqual(len(self.Person.objects.all()), 0)
+
+        self.assertEqual(len(self.Person.objects.filter(name__exact='Anthony')), 0)
+        a.is_deleted = False
+        a.save()
+        self.assertEqual(len(self.Person.objects.filter(name__exact='Anthony')), 1)
+
+        b = self.Programmer.objects.create(name='Thomas', language='python.net')
+        self.assertEqual(len(self.Programmer.objects.all()), 1)
+        b.delete()
+        self.assertEqual(len(self.Programmer.objects.all()), 0)
+        
+        self.assertEqual(len(self.Programmer.objects.filter(name__exact='Thomas')), 0)
+        b.is_deleted = False
+        b.save()
+        self.assertEqual(len(self.Programmer.objects.filter(name__exact='Thomas')), 1)
+                
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()

@@ -69,6 +69,28 @@ class DocumentBase(Document):
         'abstract': True,
     }
 
+class NotDeletedQuerySet(QuerySet):
+    def __call__(self, q_obj=None, class_check=True, slave_okay=False, read_preference=None, **query):
+        if q_obj:
+            q_obj &= Q(is_deleted=False)
+        else:
+            q_obj = Q(is_deleted=False)
+        return super(NotDeletedQuerySet, self).__call__(q_obj, class_check, slave_okay, read_preference, **query)
+    
+class SoftDeleteDocument(Document):
+    is_deleted = BooleanField(default=False)
+    
+    def delete(self, **kwargs): 
+        # delete only if already saved
+        if self.id:
+            self.is_deleted = True     
+            self.save(**kwargs) 
+    
+    meta = {
+        'abstract': True,
+        'queryset_class': NotDeletedQuerySet,
+    }
+
 
 from bson.dbref import DBRef
 
