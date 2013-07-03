@@ -74,7 +74,7 @@ class SoftDeleteTestCase(unittest.TestCase):
         }
 
     class Programmer(Person):
-        langauge = TrimmedStringField()
+        language = TrimmedStringField()
 
     def setUp(self):
         self.Person.drop_collection()
