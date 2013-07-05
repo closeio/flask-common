@@ -82,7 +82,7 @@ class SoftDeleteDocument(Document):
     
     def delete(self, **kwargs): 
         # delete only if already saved
-        if self.id:
+        if self.pk:
             self.is_deleted = True     
             self.save(**kwargs) 
     
