@@ -7,6 +7,18 @@ import unidecode
 from blist import sortedset
 from logging.handlers import SMTPHandler
 
+def json_list_generator(results):
+    """Given a generator of individual JSON results, generate a JSON array"""
+    yield '['
+    this_val = results.next()
+    while True:
+        next_val = next(results, None)
+        yield this_val + ',' if next_val else this_val
+        this_val = next_val
+        if not this_val:
+            break
+    yield ']'
+
 class isortedset(sortedset):
     def __init__(self, *args, **kwargs):
         if not kwargs.get('key'):
@@ -99,7 +111,7 @@ class NamedCsvReader(CsvReader):
     def __init__(self, *args, **kwargs):
         super(NamedCsvReader, self).__init__(*args, **kwargs)
         self.headers = super(NamedCsvReader, self).next()
-    
+
     def next(self):
         row = super(NamedCsvReader, self).next()
         return dict(zip(self.headers, row))
