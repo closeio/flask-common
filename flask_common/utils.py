@@ -1,11 +1,15 @@
-import re
-import csv
 import codecs
-import datetime
+import csv
 import cStringIO
+import datetime
+import re
 import unidecode
+import StringIO
+
 from blist import sortedset
+from itertools import chain
 from logging.handlers import SMTPHandler
+
 
 def json_list_generator(results):
     """Given a generator of individual JSON results, generate a JSON array"""
@@ -401,3 +405,69 @@ def uniqify(seq):
     # preserves order
     seen = set()
     return [ x for x in seq if x not in seen and not seen.add(x)]
+
+
+### NORMALIZATION UTILS ###
+
+class FileFormatException(Exception):
+    pass
+
+"""
+Data file format:
+key(s) => value(s)
+"""
+class Reader(object):
+    def __init__(self, filename):
+        self.reader = codecs.open(filename, 'r', 'utf-8')
+
+    def __exit__(self):
+        self.reader.close()
+
+    def __iter__(self):
+        return self
+
+    @classmethod
+    def split(cls, line, one_to_many=True):
+        """ return key, values if one_to_many else return values, key """
+
+        def _get(value):
+            one, two = value.split('=>', 1)
+            return one.strip(), two.strip()
+
+        s = StringIO.StringIO(line)
+        seq = [x.strip() for x in unicode_csv_reader(s).next()]
+        if not seq:
+            raise FileFormatException("Line does not contain any valid data.")
+        if one_to_many:
+            key, value = _get(seq.pop(0))
+            seq.insert(0, value)
+            return key, seq
+        else:
+            value, key = _get(seq.pop())
+            seq.append(value)
+            return seq, key
+
+    def next(self, one_to_many=True):
+        return Reader.split(self.reader.next(), one_to_many=one_to_many)
+
+class Normalization(object):
+    """ list of strings => normalized form """
+    def __init__(self, keys, value):
+        self.tokens = keys
+        self.normalized_form = value
+
+    def merge(normalization):
+        self.tokens = list(set(self.tokens) | set(normalization.tokens))
+
+"""
+keys => value
+"""
+class NormalizationReader(Reader):
+    def next(self):
+        return Normalization(*super(NormalizationReader, self).next(one_to_many=False))
+
+def build_normalization_map(filename, case_sensitive=False):
+    norm_map = {}
+    normalizations = NormalizationReader(filename)
+    return dict(list(chain.from_iterable([[(token if case_sensitive else token.lower(), normalization.normalized_form) for token in normalization.tokens] for normalization in normalizations])))
+
