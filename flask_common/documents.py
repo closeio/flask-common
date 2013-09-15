@@ -76,16 +76,16 @@ class NotDeletedQuerySet(QuerySet):
         else:
             q_obj = Q(is_deleted=False)
         return super(NotDeletedQuerySet, self).__call__(q_obj, class_check, slave_okay, read_preference, **query)
-    
+
 class SoftDeleteDocument(Document):
     is_deleted = BooleanField(default=False)
-    
-    def delete(self, **kwargs): 
+
+    def delete(self, **kwargs):
         # delete only if already saved
         if self.pk:
-            self.is_deleted = True     
-            self.save(**kwargs) 
-    
+            self.is_deleted = True
+            self.save(**kwargs)
+
     meta = {
         'abstract': True,
         'queryset_class': NotDeletedQuerySet,
@@ -149,7 +149,7 @@ def fetch_related(objs, field_dict, cache_map=None):
             refs = [getattr(obj, field_name).pk for obj in objs if getattr(getattr(obj, field_name), '_lazy', False)]
         elif isinstance(field, SafeReferenceListField):
             refs = [obj._db_data.get(db_field, []) for obj in objs if field_name not in obj._internal_data]
-            refs = [item.id for sublist in refs for item in sublist] # flatten
+            refs = [item.id if isinstance(item, DBRef) else item for sublist in refs for item in sublist] # flatten
 
         if refs:
             if not document_class in cache_map:
@@ -200,4 +200,5 @@ def fetch_related(objs, field_dict, cache_map=None):
 
                 elif isinstance(field, SafeReferenceListField):
                     if field_name not in obj._internal_data:
-                        setattr(obj, field_name, filter(None, [rel_obj_map.get(val.id) for val in obj._db_data.get(db_field, [])]))
+                        setattr(obj, field_name, filter(None, [rel_obj_map.get(val.id if isinstance(val, DBRef) else val) for val in obj._db_data.get(db_field, [])]))
+
