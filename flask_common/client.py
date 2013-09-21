@@ -18,6 +18,8 @@ class ApiClient(Client):
     def open(self, *args, **kwargs):
         # include api_key auth header in all api calls
         api_key = kwargs.pop('api_key', self.api_key)
+        if 'json' in kwargs and 'data' not in kwargs:
+            kwargs['data'] = json.dumps(kwargs.pop('json'))
         if 'headers' not in kwargs:
             kwargs['headers'] = self.get_headers(api_key)
         return super(ApiClient, self).open(*args, **kwargs)
