@@ -5,23 +5,10 @@ import datetime
 import re
 import unidecode
 import StringIO
-import json
 
 from blist import sortedset
 from itertools import chain
 from logging.handlers import SMTPHandler
-
-
-def local_request(view, args=None, user=None):
-    from flask import current_app
-    ctx = current_app.test_request_context()
-    ctx.request.args = args
-    ctx.user = user
-    ctx.push()
-    data = view.dispatch_request().data
-    json_data = json.loads(data)
-    ctx.pop()
-    return json_data
 
 def json_list_generator(results):
     """Given a generator of individual JSON results, generate a JSON array"""
