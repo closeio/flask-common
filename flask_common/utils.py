@@ -412,8 +412,25 @@ class FileFormatException(Exception):
     pass
 
 """
-Data file format:
-key(s) => value(s)
+Able to interpret files of the form:
+
+    key => value1, value2          [this is the default case where one_to_many=True]
+    OR
+    value1, value2 => key          [one_to_many=False]
+
+
+This is useful for cases where we want to normalize values such as:
+
+    United States, United States of America, 'Merica, USA, U.S. => US
+
+    Minnesota => MN
+
+    Minnesota => MN, Minne
+
+This reader also can handle quoted values such as:
+
+    "this => that" => "this", that
+
 """
 class Reader(object):
     def __init__(self, filename):
@@ -469,4 +486,3 @@ def build_normalization_map(filename, case_sensitive=False):
     norm_map = {}
     normalizations = NormalizationReader(filename)
     return dict(list(chain.from_iterable([[(token if case_sensitive else token.lower(), normalization.normalized_form) for token in normalization.tokens] for normalization in normalizations])))
-
