@@ -3,6 +3,7 @@ import csv
 import cStringIO
 import datetime
 import re
+from smtplib import SMTPDataError
 import unidecode
 import StringIO
 
@@ -194,15 +195,16 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
     if not subject:
         subject = "[%s] %s%s %s on %s" % (request.host, extra_subject and '%s: ' % extra_subject or '', request.path, exc_info[1].__class__.__name__, gethostname())
 
-    message = ''
+    message_context = ''
+    message_vars = ''
 
     if context:
-        message += 'Context:\n\n'
+        message_context += 'Context:\n\n'
         try:
-            message += '\n'.join(['%s: %s' % (k, context[k]) for k in sorted(context.keys())])
+            message_context += '\n'.join(['%s: %s' % (k, context[k]) for k in sorted(context.keys())])
         except:
-            message += 'Error reporting context.'
-        message += '\n\n\n\n'
+            message_context += 'Error reporting context.'
+        message_context += '\n\n\n\n'
 
 
     if vars:
@@ -213,26 +215,28 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
             stack.append(tb.tb_frame)
             tb = tb.tb_next
 
-        message += "Locals by frame, innermost last:\n"
+        message_vars += "Locals by frame, innermost last:\n"
 
         for frame in stack:
-            message += "\nFrame %s in %s at line %s\n" % (frame.f_code.co_name,
+            message_vars += "\nFrame %s in %s at line %s\n" % (frame.f_code.co_name,
                                                  frame.f_code.co_filename,
                                                  frame.f_lineno)
             for key, value in frame.f_locals.items():
-                message += "\t%16s = " % key
+                message_vars += "\t%16s = " % key
                 # We have to be careful not to cause a new error in our error
                 # printer! Calling repr() on an unknown object could cause an
                 # error we don't want.
                 try:
-                    message += '%s\n' % repr(value)
+                    message_vars += '%s\n' % repr(value)
                 except:
-                    message += "<ERROR WHILE PRINTING VALUE>\n"
+                    message_vars += "<ERROR WHILE PRINTING VALUE>\n"
+
+        message_vars += '\n\n\n'
 
 
-    message += '\n\n\n%s\n' % (
-            '\n'.join(traceback.format_exception(*exc_info)),
-        )
+    message_tb = '\n'.join(traceback.format_exception(*exc_info))
+
+    message = ''.join([message_context, message_vars, message_tb])
 
     recipients = recipients if recipients else current_app.config['ADMINS']
 
@@ -245,7 +249,13 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
             from flask.ext.mail import Mail, Message
             msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=recipients)
             msg.body = message
-            current_app.mail.send(msg)
+            try:
+                current_app.mail.send(msg)
+            except SMTPDataError as e:
+                # Message too large? Exclude variable info.
+                message = ''.join([message_context, 'Not including variable info because we received an SMTP error:\n', repr(e), '\n\n\n\n', message_tb])
+                msg.body = message
+                current_app.mail.send(msg)
 
 
 def force_unicode(s):
