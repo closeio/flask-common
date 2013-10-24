@@ -192,13 +192,17 @@ def localtoday(tz):
     return local_today
 
 
-def make_unaware(t):
+def make_unaware(d):
     """ Converts an unaware datetime in UTC or an aware datetime to an unaware
     datetime in UTC. """
-    if t.tzinfo is not None and t.tzinfo.utcoffset(None) is not None:
-        return t.astimezone(pytz.utc).replace(tzinfo=None)
+
+    # "A datetime object d is aware if d.tzinfo is not None and
+    # d.tzinfo.utcoffset(d) does not return None."
+    # - http://docs.python.org/2/library/datetime.html
+    if d.tzinfo is not None and d.tzinfo.utcoffset(d) is not None:
+        return d.astimezone(pytz.utc).replace(tzinfo=None)
     else:
-        return t.replace(tzinfo=None)
+        return d.replace(tzinfo=None)
 
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
