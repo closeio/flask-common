@@ -1,7 +1,9 @@
+import calendar
 import codecs
 import csv
 import cStringIO
 import datetime
+import pytz
 import re
 from smtplib import SMTPDataError
 import unidecode
@@ -178,12 +180,20 @@ def utctoday():
     return today
 
 
+def utctime():
+    return calendar.timegm(datetime.datetime.utcnow().utctimetuple())
+
+
 def localtoday(tz):
-    import pytz
     local_now = tz.normalize(pytz.utc.localize(datetime.datetime.utcnow()).astimezone(tz))
     local_today = datetime.date(*local_now.timetuple()[:3])
     return local_today
 
+def make_unaware(t):
+    if t.tzinfo is not None and t.tzinfo.utcoffset(None) is not None:
+        return t.astimezone(pytz.utc).replace(tzinfo=None)
+    else:
+        return t.replace(tzinfo=None)
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
     from socket import gethostname
