@@ -169,6 +169,7 @@ class Enum(object):
     def choices(cls):
         return [(getattr(cls,v), v) for v in dir(cls) if not callable(getattr(cls,v)) and not (v.startswith('__') and v.endswith('__'))]
 
+
 def grouper(n, iterable):
     # e.g. 2, [1, 2, 3, 4, 5] -> [[1, 2], [3, 4], [5]]
     return [iterable[i:i+n] for i in range(0, len(iterable), n)]
@@ -181,6 +182,7 @@ def utctoday():
 
 
 def utctime():
+    """ Return seconds since epoch like time.time(), but in UTC. """
     return calendar.timegm(datetime.datetime.utcnow().utctimetuple())
 
 
@@ -189,11 +191,15 @@ def localtoday(tz):
     local_today = datetime.date(*local_now.timetuple()[:3])
     return local_today
 
+
 def make_unaware(t):
+    """ Converts an unaware datetime in UTC or an aware datetime to an unaware
+    datetime in UTC. """
     if t.tzinfo is not None and t.tzinfo.utcoffset(None) is not None:
         return t.astimezone(pytz.utc).replace(tzinfo=None)
     else:
         return t.replace(tzinfo=None)
+
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
     from socket import gethostname
