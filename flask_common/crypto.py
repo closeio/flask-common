@@ -5,6 +5,7 @@ import hashlib
 import hmac
 
 AES_BLOCK_SIZE = 32 # 256 bit
+HMAC_KEY_SIZE = 32
 HMAC_DIGEST = hashlib.sha256
 HMAC_DIGEST_SIZE = hashlib.sha256().digest_size
 
@@ -21,15 +22,17 @@ different messages.
 
 # Returns a new randomly generated AES key
 def aes_generate_key():
-   return rng(AES_BLOCK_SIZE)
+   return rng(AES_BLOCK_SIZE + HMAC_KEY_SIZE)
 
 # Encrypt + sign using a random IV
 def aes_encrypt(key, data):
+   # TODO: raise if key has wrong length
    iv = rng(AES_BLOCK_SIZE)
    return iv + aes_encrypt_iv(key, data, iv)
 
 # Verify + decrypt data encrypted with IV
 def aes_decrypt(key, data):
+   # TODO: raise if key has wrong length
    iv = data[:AES_BLOCK_SIZE]
    data = data[AES_BLOCK_SIZE:]
    return aes_decrypt_iv(key, data, iv)

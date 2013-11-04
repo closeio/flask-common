@@ -164,25 +164,38 @@ class EncryptedStringField(BinaryField):
 
     IV_SIZE = 16
 
-    def __init__(self, key, *args, **kwargs):
+    def __init__(self, key_or_list, *args, **kwargs):
         """
-        Key: 32 byte binary string containing the 256 bit AES key
+        key_or_list: 64 byte binary string containing a 256 bit AES key and a
+        256 bit HMAC-SHA256 key.
+        Alternatively, a list of keys for decryption may be provided. The
+        first key will always be used for encryption. This is e.g. useful for
+        key migration.
         """
-        self.key = key
+        if isinstance(key_or_list, (list, tuple)):
+            self.key_list = key_or_list
+        else:
+            self.key_list = [key_or_list]
+        assert len(self.key_list) > 0, "No key provided"
+        # TODO: raise when key length is invalid.
         return super(EncryptedStringField, self).__init__(*args, **kwargs)
 
     def _encrypt(self, data):
-        return Binary(aes_encrypt(self.key, data))
+        return Binary(aes_encrypt(self.key_list[0], data))
 
     def _decrypt(self, data):
-        try:
-            return aes_decrypt(self.key, data)
-        except AuthenticationError:
-            # TODO: remove insecure encryption once migrated
-            from Crypto.Cipher import AES
-            import Padding
-            iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
-            return Padding.removePadding(AES.new(self.key, AES.MODE_CBC, iv).decrypt(cipher))
+        for key in self.key_list:
+            try:
+                return aes_decrypt(key, data)
+            except AuthenticationError:
+                pass
+
+        # TODO: REALLY REALLY remove insecure encryption once migrated
+        # Use the last key in the list from the loop to decrypt.
+        from Crypto.Cipher import AES
+        import Padding
+        iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
+        return Padding.removePadding(AES.new(key, AES.MODE_CBC, iv).decrypt(cipher))
 
     def to_python(self, value):
         return value and self._decrypt(value) or None
