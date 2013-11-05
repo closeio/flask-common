@@ -3,7 +3,7 @@ import pytz
 from mongoengine.fields import ReferenceField, StringField, BinaryField, ListField, EmailField
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 from flask.ext.common.utils import isortedset
-from flask.ext.common.crypto import aes_encrypt, aes_decrypt, AuthenticationError
+from flask.ext.common.crypto import aes_encrypt, aes_decrypt, AuthenticationError, KEY_LENGTH
 from bson import Binary
 from bson.dbref import DBRef
 from blist import sortedset
@@ -162,8 +162,6 @@ class EncryptedStringField(BinaryField):
     and encrypts when the document is saved.
     """
 
-    IV_SIZE = 16
-
     def __init__(self, key_or_list, *args, **kwargs):
         """
         key_or_list: 64 byte binary string containing a 256 bit AES key and a
@@ -177,7 +175,8 @@ class EncryptedStringField(BinaryField):
         else:
             self.key_list = [key_or_list]
         assert len(self.key_list) > 0, "No key provided"
-        # TODO: raise when key length is invalid.
+        for key in self.key_list:
+            assert len(key) == KEY_LENGTH, 'invalid key size'
         return super(EncryptedStringField, self).__init__(*args, **kwargs)
 
     def _encrypt(self, data):
@@ -190,12 +189,7 @@ class EncryptedStringField(BinaryField):
             except AuthenticationError:
                 pass
 
-        # TODO: REALLY REALLY remove insecure encryption once migrated
-        # Use the last key in the list from the loop to decrypt.
-        from Crypto.Cipher import AES
-        import Padding
-        iv, cipher = data[:self.IV_SIZE], data[self.IV_SIZE:]
-        return Padding.removePadding(AES.new(key, AES.MODE_CBC, iv).decrypt(cipher))
+        raise AuthenticationError('message authentication failed')
 
     def to_python(self, value):
         return value and self._decrypt(value) or None
