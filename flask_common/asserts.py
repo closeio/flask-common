@@ -4,6 +4,10 @@ def response_success(response, code=None):
     else:
         assert code == response.status_code, 'Received %d response: %s' % (response.status_code, response.data)
 
+def validation_error(response, content_type='application/json'):
+    assert content_type in response.content_type, 'Invalid content-type: %s' % response.content_type
+    response_error(response, code=400)
+
 def response_error(response, code=None):
     if code is None:
         assert 400 <= response.status_code < 500, 'Received %d response: %s' % (response.status_code, response.data)
