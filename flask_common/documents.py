@@ -2,7 +2,6 @@ import os
 import datetime
 from zbase62 import zbase62
 from mongoengine import *
-from mongoengine.base import ValidationError
 from mongoengine.queryset import OperationError
 
 

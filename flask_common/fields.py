@@ -1,11 +1,10 @@
 import re
 import pytz
-from mongoengine.fields import ReferenceField, StringField, BinaryField, ListField, EmailField
+from mongoengine.fields import StringField, BinaryField, ListField, EmailField
 from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
 from flask.ext.common.utils import isortedset
 from flask.ext.common.crypto import aes_encrypt, aes_decrypt, AuthenticationError, KEY_LENGTH
 from bson import Binary
-from bson.dbref import DBRef
 from blist import sortedset
 
 
