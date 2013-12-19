@@ -68,12 +68,14 @@ class DocumentBase(Document):
         'abstract': True,
     }
 
+
 class NotDeletedQuerySet(QuerySet):
-    def __call__(self, q_obj=None, class_check=True, slave_okay=False, read_preference=None, **query):
-        if q_obj:
-            q_obj &= Q(is_deleted=False)
-        else:
-            q_obj = Q(is_deleted=False)
+    def __call__(self, q_obj=None, class_check=True, slave_okay=False, read_preference=None, include_deleted=False, **query):
+        if not include_deleted:
+            if q_obj:
+                q_obj &= Q(is_deleted=False)
+            else:
+                q_obj = Q(is_deleted=False)
         return super(NotDeletedQuerySet, self).__call__(q_obj, class_check, slave_okay, read_preference, **query)
 
 class SoftDeleteDocument(Document):
@@ -85,13 +87,17 @@ class SoftDeleteDocument(Document):
             self.is_deleted = True
             self.save(**kwargs)
 
+    @queryset_manager
+    def all_objects(doc_cls, queryset):
+        if not hasattr(doc_cls, '_all_objs_queryset'):
+            doc_cls._all_objs_queryset = QuerySet(doc_cls, doc_cls._get_collection())
+        return doc_cls._all_objs_queryset
+
     meta = {
         'abstract': True,
         'queryset_class': NotDeletedQuerySet,
     }
 
-
-from bson.dbref import DBRef
 
 def fetch_related(objs, field_dict, cache_map=None):
     """
@@ -206,3 +212,4 @@ def fetch_related(objs, field_dict, cache_map=None):
                 elif isinstance(field, SafeReferenceListField):
                     if field_name not in obj._internal_data:
                         setattr(obj, field_name, filter(None, [rel_obj_map.get(id_from_value(field.field, val)) for val in obj._db_data.get(db_field, [])]))
+
