@@ -5,16 +5,25 @@ import cStringIO
 import datetime
 import pytz
 import re
+import signal
+import smtplib
+import sys
+import thread
+import threading
+import traceback
 import unidecode
 import StringIO
 
 from blist import sortedset
+from email.utils import formatdate
+from flask import current_app, request, Response
+from flask.ext.mail import Message
+from functools import wraps
 from itertools import chain
 from logging.handlers import SMTPHandler
 from smtplib import SMTPDataError
+from socket import gethostname
 
-from flask import Response
-from functools import wraps
 
 def returns_xml(f):
     @wraps(f)
@@ -55,8 +64,6 @@ class DetailedSMTPHandler(SMTPHandler):
         return super(DetailedSMTPHandler, self).__init__(*args, **kwargs)
 
     def getSubject(self, record):
-        from flask import request
-        from socket import gethostname
         error = 'Error'
         ei = record.exc_info
         if ei:
@@ -70,9 +77,6 @@ class DetailedSMTPHandler(SMTPHandler):
         Format the record and send it to the specified addressees.
         """
         try:
-            import smtplib
-            from email.utils import formatdate
-            from flask import request
             port = self.mailport
             if not port:
                 port = smtplib.SMTP_PORT
@@ -108,10 +112,10 @@ def utf_8_encoder(unicode_csv_data):
     for line in unicode_csv_data:
         yield line.encode('utf-8')
 
-"""
-Wrapper around csv reader that ignores non utf-8 chars and strips the record
-"""
 class CsvReader(object):
+    """ Wrapper around csv reader that ignores non utf-8 chars and strips the
+    record. """
+
     def __init__(self, file_name, delimiter=','):
         self.reader = csv.reader(open(file_name, 'rbU'), delimiter=delimiter)
 
@@ -216,10 +220,6 @@ def make_unaware(d):
 
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
-    from socket import gethostname
-    import traceback, sys
-    from flask import current_app, request
-
     exc_info = sys.exc_info()
 
     if not subject:
@@ -276,7 +276,6 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
             print
             print message
         else:
-            from flask.ext.mail import Mail, Message
             msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=recipients)
             msg.body = message
             try:
@@ -289,7 +288,7 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
 
 
 def force_unicode(s):
-    # Return a unicode object, no matter what the string is.
+    """ Return a unicode object, no matter what the string is. """
 
     if isinstance(s, unicode):
         return s
@@ -305,8 +304,11 @@ def slugify(text, separator='_'):
     text = text.lower().strip()
     return re.sub(r'\W+', separator, text).strip(separator)
 
-# Applies a function to objects by traversing lists/tuples/dicts recursively.
+
 def apply_recursively(obj, f):
+    """
+    Applies a function to objects by traversing lists/tuples/dicts recursively.
+    """
     if isinstance(obj, (list, tuple)):
         return [apply_recursively(item, f) for item in obj]
     elif isinstance(obj, dict):
@@ -316,18 +318,16 @@ def apply_recursively(obj, f):
     else:
         return f(obj)
 
-
-import time
-import signal
-
 class Timeout(Exception):
     pass
 
 class Timer(object):
-    # Timer class with an optional signal timer.
-    # Raises a Timeout exception when the timeout occurs.
-    # When using timeouts, you must not nest this function nor call it in
-    # any thread other than the main thread.
+    """
+    Timer class with an optional signal timer.
+    Raises a Timeout exception when the timeout occurs.
+    When using timeouts, you must not nest this function nor call it in
+    any thread other than the main thread.
+    """
 
     def __init__(self, timeout=None, timeout_message=''):
         self.timeout = timeout
@@ -354,8 +354,6 @@ class Timer(object):
             signal.alarm(0)
             signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
-
-import threading
 
 # Semaphore implementation from Python 3 which supports timeouts.
 class Semaphore(threading._Verbose):
@@ -414,15 +412,16 @@ class Semaphore(threading._Verbose):
 
 
 class ThreadedTimer(object):
-    # Timer class with an optional threaded timer.
-    # By default, interrupts the main thread with a KeyboardInterrupt.
+    """
+    Timer class with an optional threaded timer. By default, interrupts the
+    main thread with a KeyboardInterrupt.
+    """
 
     def __init__(self, timeout=None, on_timeout=None):
         self.timeout = timeout
         self.on_timeout = on_timeout or self._timeout_handler
 
     def _timeout_handler(self):
-        import thread
         thread.interrupt_main()
 
     def __enter__(self):
@@ -451,28 +450,29 @@ def uniqify(seq):
 class FileFormatException(Exception):
     pass
 
-"""
-Able to interpret files of the form:
-
-    key => value1, value2          [this is the default case where one_to_many=True]
-    OR
-    value1, value2 => key          [one_to_many=False]
-
-
-This is useful for cases where we want to normalize values such as:
-
-    United States, United States of America, 'Merica, USA, U.S. => US
-
-    Minnesota => MN
-
-    Minnesota => MN, Minne
-
-This reader also can handle quoted values such as:
-
-    "this => that" => "this", that
-
-"""
 class Reader(object):
+    """
+    Able to interpret files of the form:
+
+        key => value1, value2          [this is the default case where one_to_many=True]
+        OR
+        value1, value2 => key          [one_to_many=False]
+
+
+    This is useful for cases where we want to normalize values such as:
+
+        United States, United States of America, 'Merica, USA, U.S. => US
+
+        Minnesota => MN
+
+        Minnesota => MN, Minne
+
+    This reader also can handle quoted values such as:
+
+        "this => that" => "this", that
+
+    """
+
     def __init__(self, filename):
         self.reader = codecs.open(filename, 'r', 'utf-8')
 
@@ -508,21 +508,21 @@ class Reader(object):
 
 class Normalization(object):
     """ list of strings => normalized form """
+
     def __init__(self, keys, value):
         self.tokens = keys
         self.normalized_form = value
 
-    def merge(normalization):
+    def merge(self, normalization):
         self.tokens = list(set(self.tokens) | set(normalization.tokens))
 
-"""
-keys => value
-"""
 class NormalizationReader(Reader):
+    """ keys => value """
+
     def next(self):
         return Normalization(*super(NormalizationReader, self).next(one_to_many=False))
 
 def build_normalization_map(filename, case_sensitive=False):
-    norm_map = {}
     normalizations = NormalizationReader(filename)
     return dict(list(chain.from_iterable([[(token if case_sensitive else token.lower(), normalization.normalized_form) for token in normalization.tokens] for normalization in normalizations])))
+
