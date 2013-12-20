@@ -5,13 +5,23 @@ import cStringIO
 import datetime
 import pytz
 import re
-from smtplib import SMTPDataError
 import unidecode
 import StringIO
 
 from blist import sortedset
 from itertools import chain
 from logging.handlers import SMTPHandler
+from smtplib import SMTPDataError
+
+from flask import Response
+from functools import wraps
+
+def returns_xml(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        r = f(*args, **kwargs)
+        return Response(r, content_type='text/xml; charset=utf-8')
+    return decorated_function
 
 def json_list_generator(results):
     """Given a generator of individual JSON results, generate a JSON array"""
