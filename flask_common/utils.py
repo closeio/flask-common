@@ -272,7 +272,8 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
 
     if not current_app.testing:
         if current_app.debug:
-            print subject
+            print 'Sending mail_exception:'
+            print 'Subject: {0}'.format(subject)
             print
             print message
         else:
