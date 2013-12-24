@@ -105,15 +105,16 @@ class PhoneField(StringField):
     Numbers are assumed to be in the international E164 format: +441138680428
     """
 
-    def _parse(self, value):
-        parsed = parse(value, None)
+    @classmethod
+    def _parse(cls, value, region=None):
+        parsed = parse(value, region)
 
         # strip empty extension for US
         if parsed.country_code == 1 and len(str(parsed.national_number)) > 10:
             regex = re.compile('.+\s*e?xt?\.?\s*$')
             if regex.match(value):
                 value = re.sub('\s*e?xt?\.?\s*$', '', value)
-                new_parsed = parse(value, 'US')
+                new_parsed = parse(value, region)
                 if len(str(new_parsed)) >= 10:
                     parsed = new_parsed
 
@@ -124,26 +125,27 @@ class PhoneField(StringField):
             return None
         else:
             try:
-                self._parse(value)
+                PhoneField._parse(value)
             except NumberParseException:
                 self.error('Phone is not valid')
 
     def from_python(self, value):
-        return self.to_raw_phone(value)
+        return PhoneField.to_raw_phone(value)
 
     def to_formatted_phone(self, value):
         if isinstance(value, basestring) and value != '':
             try:
-                phone = self._parse(value)
+                phone = PhoneField._parse(value)
                 value = format_number(phone, PhoneNumberFormat.INTERNATIONAL)
             except NumberParseException:
                 pass
         return value
 
-    def to_raw_phone(self, value):
+    @classmethod
+    def to_raw_phone(cls, value, region=None):
         if isinstance(value, basestring) and value != '':
             try:
-                phone = self._parse(value)
+                phone = PhoneField._parse(value, region)
                 value = format_number(phone, PhoneNumberFormat.E164)
                 if phone.extension:
                     value += 'x%s' % phone.extension
@@ -152,7 +154,7 @@ class PhoneField(StringField):
         return value
 
     def prepare_query_value(self, op, value):
-        return self.to_raw_phone(value)
+        return PhoneField.to_raw_phone(value)
 
 
 class EncryptedStringField(BinaryField):
