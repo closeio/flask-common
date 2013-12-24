@@ -101,12 +101,14 @@ class PhoneField(StringField):
     Field that performs phone number validation.
     Values are stored in the format "+14151231234x123" in MongoDB and displayed
     in the format "+1 415-123-1234 ext. 123" in Python.
+
+    Numbers are assumed to be in the international E164 format: +441138680428
     """
 
     def _parse(self, value):
-        parsed = parse(value, 'US')
+        parsed = parse(value, None)
 
-        # strip empty extension
+        # strip empty extension for US
         if parsed.country_code == 1 and len(str(parsed.national_number)) > 10:
             regex = re.compile('.+\s*e?xt?\.?\s*$')
             if regex.match(value):
