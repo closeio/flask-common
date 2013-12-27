@@ -127,8 +127,11 @@ class PhoneField(StringField):
 
         try:
             number = PhoneField._parse(value)
+            """
+            # For now we don't enforce strict number validation since callers can fake their CLID
             if not phonenumbers.is_valid_number(number):
                 raise phonenumbers.NumberParseException(phonenumbers.NumberParseException.NOT_A_NUMBER, 'Not a valid number')
+            """
         except phonenumbers.NumberParseException:
             self.error('Phone is not valid')
 
