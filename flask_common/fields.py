@@ -1,11 +1,12 @@
 import re
 import pytz
-from mongoengine.fields import StringField, BinaryField, ListField, EmailField
-from phonenumbers.phonenumberutil import format_number, parse, PhoneNumberFormat, NumberParseException
-from flask.ext.common.utils import isortedset
-from flask.ext.common.crypto import aes_encrypt, aes_decrypt, AuthenticationError, KEY_LENGTH
+import phonenumbers
 from bson import Binary
 from blist import sortedset
+from mongoengine.fields import StringField, BinaryField, ListField, EmailField
+
+from flask.ext.common.utils import isortedset
+from flask.ext.common.crypto import aes_encrypt, aes_decrypt, AuthenticationError, KEY_LENGTH
 
 
 class TrimmedStringField(StringField):
@@ -107,14 +108,14 @@ class PhoneField(StringField):
 
     @classmethod
     def _parse(cls, value, region=None):
-        parsed = parse(value, region)
+        parsed = phonenumbers.parse(value, region)
 
         # strip empty extension for US
         if parsed.country_code == 1 and len(str(parsed.national_number)) > 10:
             regex = re.compile('.+\s*e?xt?\.?\s*$')
             if regex.match(value):
                 value = re.sub('\s*e?xt?\.?\s*$', '', value)
-                new_parsed = parse(value, region)
+                new_parsed = phonenumbers.parse(value, region)
                 if len(str(new_parsed)) >= 10:
                     parsed = new_parsed
 
@@ -123,33 +124,41 @@ class PhoneField(StringField):
     def validate(self, value):
         if not self.required and not value:
             return None
-        else:
-            try:
-                PhoneField._parse(value)
-            except NumberParseException:
-                self.error('Phone is not valid')
+
+        try:
+            number = PhoneField._parse(value)
+            if not phonenumbers.is_valid_number(number):
+                raise phonenumbers.NumberParseException
+        except phonenumbers.NumberParseException:
+            self.error('Phone is not valid')
 
     def from_python(self, value):
         return PhoneField.to_raw_phone(value)
 
-    def to_formatted_phone(self, value):
-        if isinstance(value, basestring) and value != '':
+    def _get_formatted_phone(self, value, form):
+        if isinstance(value, basestring) and value != '' and isinstance(form, phonenumbers.PhoneNumberFormat):
             try:
                 phone = PhoneField._parse(value)
-                value = format_number(phone, PhoneNumberFormat.INTERNATIONAL)
-            except NumberParseException:
+                value = phonenumbers.format_number(phone, form)
+            except phonenumbers.NumberParseException:
                 pass
         return value
+    
+    def to_formatted_phone(self, value):
+        return self._get_formatted_phone(value, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
+
+    def to_local_formatted_phone(self, value):
+        return self._get_formatted_phone(value, phonenumbers.PhoneNumberFormat.NATIONAL)
 
     @classmethod
     def to_raw_phone(cls, value, region=None):
         if isinstance(value, basestring) and value != '':
             try:
                 phone = PhoneField._parse(value, region)
-                value = format_number(phone, PhoneNumberFormat.E164)
+                value = phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.E164)
                 if phone.extension:
                     value += 'x%s' % phone.extension
-            except NumberParseException:
+            except phonenumbers.NumberParseException:
                 pass
         return value
 
