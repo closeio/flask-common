@@ -128,7 +128,7 @@ class PhoneField(StringField):
         try:
             number = PhoneField._parse(value)
             if not phonenumbers.is_valid_number(number):
-                raise phonenumbers.NumberParseException
+                raise phonenumbers.NumberParseException(phonenumbers.NumberParseException.NOT_A_NUMBER, 'Not a valid number')
         except phonenumbers.NumberParseException:
             self.error('Phone is not valid')
 
