@@ -127,11 +127,6 @@ class FieldTestCase(unittest.TestCase):
         assert phone.id == Phone.objects.get(phone='+16506181234x768').id
         assert phone.id == Phone.objects.get(phone='+1 650-618-1234 ext 768').id
 
-    def test_invalid_phone(self):
-        phone = Phone(phone='+1 000 222 3333 ext 23')
-        assert phone.phone == '+10002223333x23'
-        self.assertRaises(ValidationError, phone.validate)
-
     def test_timezone_field(self):
         location = Location()
         location.save()

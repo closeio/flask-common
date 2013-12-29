@@ -139,7 +139,7 @@ class PhoneField(StringField):
         return PhoneField.to_raw_phone(value)
 
     def _get_formatted_phone(self, value, form):
-        if isinstance(value, basestring) and value != '' and isinstance(form, phonenumbers.PhoneNumberFormat):
+        if isinstance(value, basestring) and value != '':
             try:
                 phone = PhoneField._parse(value)
                 value = phonenumbers.format_number(phone, form)
