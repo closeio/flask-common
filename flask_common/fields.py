@@ -108,6 +108,11 @@ class PhoneField(StringField):
 
     @classmethod
     def _parse(cls, value, region=None):
+        # valid numbers don't start with the same digit(s) as their country code so we strip them
+        country_code = phonenumbers.country_code_for_region(region)
+        if country_code and value.startswith(str(country_code)):
+            value = value[len(str(country_code)):]
+
         parsed = phonenumbers.parse(value, region)
 
         # strip empty extension for US
