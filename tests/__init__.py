@@ -15,7 +15,7 @@ from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, E
 from flask_common.formfields import BetterDateTimeField
 from flask_common.documents import RandomPKDocument, DocumentBase, SoftDeleteDocument
 
-from mongoengine import ReferenceField, SafeReferenceListField
+from mongoengine import ReferenceField, SafeReferenceListField, StringField, Document
 
 from werkzeug.datastructures import MultiDict
 from wtforms import Form
@@ -65,6 +65,19 @@ class DocTestCase(unittest.TestCase):
         self.assertEqual(Doc.objects.filter(text='')._query, {'text': ''})
         self.assertFalse(Doc._meta['allow_inheritance'])
 
+    def test_pk_validation(self):
+        """ Make sure that you cannot save crap in a ReferenceField that
+        references a RandomPKDocument.
+        """
+
+        class A(RandomPKDocument):
+            text = StringField()
+
+        class B(Document):
+            ref = ReferenceField(A)
+
+        self.assertRaises(ValidationError, B.objects.create, ref={'dict': True})
+
 class SoftDeleteTestCase(unittest.TestCase):
     class Person(DocumentBase, RandomPKDocument, SoftDeleteDocument):
         name = TrimmedStringField()
@@ -95,12 +108,12 @@ class SoftDeleteTestCase(unittest.TestCase):
         self.assertEqual(len(self.Programmer.objects.all()), 1)
         b.delete()
         self.assertEqual(len(self.Programmer.objects.all()), 0)
-        
+
         self.assertEqual(len(self.Programmer.objects.filter(name__exact='Thomas')), 0)
         b.is_deleted = False
         b.save()
         self.assertEqual(len(self.Programmer.objects.filter(name__exact='Thomas')), 1)
-                
+
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()

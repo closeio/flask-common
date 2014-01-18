@@ -3,10 +3,16 @@ import datetime
 from zbase62 import zbase62
 from mongoengine import *
 from mongoengine.queryset import OperationError
+from mongoengine.errors import ValidationError
 
+class StringIdField(StringField):
+    def to_mongo(self, value):
+        if not isinstance(value, basestring):
+            raise ValidationError('StringIdField only accepts string values.')
+        return super(StringIdField, self).to_mongo(value)
 
 class RandomPKDocument(Document):
-    id = StringField(unique=True, primary_key=True)
+    id = StringIdField(unique=True, primary_key=True)
 
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__, self.id)
