@@ -120,9 +120,17 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     In this sample, users and leads for all objs will be fetched and attached.
     Then, created_by and updated_by users are fetched in one query and attached.
+
     Note that the function doesn't merge queries for the same document class
     across multiple (recursive) function calls, but it never fetches the same
     related object twice.
+
+    If you need to call fetch_related multiple times, it's worth passing a
+    cache_map (initially it can be an empty dictionary). It will be extended
+    during each call to include all the objects fetched up until the current
+    call. This way we ensure that the same objects aren't fetched more than
+    once across multiple fetch_related calls. Cache map has a form of:
+    { DocumentClass: [list, of, objects, fetched, for, a, given, class] }.
     """
 
     if not objs:
