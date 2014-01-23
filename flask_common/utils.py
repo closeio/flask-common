@@ -21,6 +21,7 @@ from flask.ext.mail import Message
 from functools import wraps
 from itertools import chain
 from logging.handlers import SMTPHandler
+from mongoengine.context_managers import query_counter
 from smtplib import SMTPDataError
 from socket import gethostname
 
@@ -526,4 +527,42 @@ class NormalizationReader(Reader):
 def build_normalization_map(filename, case_sensitive=False):
     normalizations = NormalizationReader(filename)
     return dict(list(chain.from_iterable([[(token if case_sensitive else token.lower(), normalization.normalized_form) for token in normalization.tokens] for normalization in normalizations])))
+
+
+class custom_query_counter(query_counter):
+    """
+    Subclass of MongoEngine's query_counter context manager that also lets
+    you ignore some of the collections (just extend get_ignored_collections).
+
+    Initialize with custom_query_counter(verbose=True) for debugging.
+    """
+
+    def __init__(self, verbose=False):
+        super(custom_query_counter, self).__init__()
+        self.verbose = verbose
+
+    def get_ignored_collections(self):
+        return [
+            "{0}.system.indexes".format(self.db.name),
+            "{0}.system.namespaces".format(self.db.name),
+            "{0}.system.profile".format(self.db.name),
+            "{0}.$cmd".format(self.db.name),
+        ]
+
+
+    def _get_queries(self):
+        ignore_query = {"ns": {"$nin": self.get_ignored_collections()}}
+        return self.db.system.profile.find(ignore_query)
+
+    def _get_count(self):
+        """ Get the number of queries. """
+        queries = self._get_queries()
+        if self.verbose:
+            print '-'*80
+            for query in queries:
+                print query['ns'], query.get('query')
+                print
+            print '-'*80
+        count = queries.count()
+        return count
 

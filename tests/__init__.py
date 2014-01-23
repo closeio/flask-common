@@ -9,7 +9,6 @@ import unittest
 from dateutil.tz import tzutc
 from flask import Flask
 from mongoengine import connection, Document
-from mongoengine.context_managers import query_counter
 from mongoengine.fields import ReferenceField, SafeReferenceListField, StringField
 from werkzeug.datastructures import MultiDict
 from wtforms import Form
@@ -17,36 +16,11 @@ from wtforms import Form
 from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.crypto import aes_generate_key
 from flask_common.documents import fetch_related
-from flask_common.utils import apply_recursively, isortedset, slugify
+from flask_common.utils import apply_recursively, isortedset, slugify, custom_query_counter
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, \
                                 EncryptedStringField, LowerStringField, LowerEmailField
 from flask_common.formfields import BetterDateTimeField
 from flask_common.documents import RandomPKDocument, DocumentBase, SoftDeleteDocument
-
-
-class custom_query_counter(query_counter):
-    VERBOSE = False # set to True for debugging
-
-    def _get_queries(self):
-        ignore_query = {"ns": {"$nin": [
-            "{0}.system.indexes".format(self.db.name),
-            "{0}.system.namespaces".format(self.db.name),
-            "{0}.system.profile".format(self.db.name),
-            "{0}.$cmd".format(self.db.name),
-        ]}}
-        return self.db.system.profile.find(ignore_query)
-
-    def _get_count(self):
-        """ Get the number of queries. """
-        queries = self._get_queries()
-        if self.VERBOSE:
-            print '-'*80
-            for query in queries:
-                print query['ns'], query.get('query')
-                print
-            print '-'*80
-        count = queries.count()
-        return count
 
 
 
