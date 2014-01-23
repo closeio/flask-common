@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
-import unittest
 
 import datetime
-from dateutil.tz import tzutc
 import pytz
-import string
 import random
+import string
+import unittest
 
+from dateutil.tz import tzutc
 from flask import Flask
+from mongoengine import connection, Document
+from mongoengine.fields import ReferenceField, SafeReferenceListField, StringField
+from werkzeug.datastructures import MultiDict
+from wtforms import Form
+
 from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.crypto import aes_generate_key
-from flask_common.utils import apply_recursively, isortedset, slugify
-from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, EncryptedStringField, LowerStringField, LowerEmailField
+from flask_common.documents import fetch_related
+from flask_common.utils import apply_recursively, isortedset, slugify, custom_query_counter
+from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, \
+                                EncryptedStringField, LowerStringField, LowerEmailField
 from flask_common.formfields import BetterDateTimeField
 from flask_common.documents import RandomPKDocument, DocumentBase, SoftDeleteDocument
 
-from mongoengine import ReferenceField, SafeReferenceListField, StringField, Document
 
-from werkzeug.datastructures import MultiDict
-from wtforms import Form
 
 app = Flask(__name__)
 
@@ -51,6 +55,7 @@ class Book(db.Document):
 class Author(db.Document):
     books = SafeReferenceListField(ReferenceField(Book))
 
+
 class DocTestCase(unittest.TestCase):
 
     def test_cls_inheritance(self):
@@ -77,6 +82,7 @@ class DocTestCase(unittest.TestCase):
             ref = ReferenceField(A)
 
         self.assertRaises(ValidationError, B.objects.create, ref={'dict': True})
+
 
 class SoftDeleteTestCase(unittest.TestCase):
     class Person(DocumentBase, RandomPKDocument, SoftDeleteDocument):
@@ -113,6 +119,7 @@ class SoftDeleteTestCase(unittest.TestCase):
         b.is_deleted = False
         b.save()
         self.assertEqual(len(self.Programmer.objects.filter(name__exact='Thomas')), 1)
+
 
 class FieldTestCase(unittest.TestCase):
     def setUp(self):
@@ -151,19 +158,11 @@ class FieldTestCase(unittest.TestCase):
         assert location.timezone == pytz.timezone('America/Los_Angeles')
 
     def test_trimmedstring_field(self):
-        try:
-            test = TestTrimmedFields(name='')
-            test.save()
-            self.fail("should have failed")
-        except ValidationError, e:
-            pass
+        test = TestTrimmedFields(name='')
+        self.assertRaises(ValidationError, test.save)
 
-        try:
-            location = TestTrimmedFields(name='  ')
-            test.save()
-            self.fail("should have failed")
-        except ValidationError, e:
-            pass
+        test = TestTrimmedFields(name='  ')
+        self.assertRaises(ValidationError, test.save)
 
         test = TestTrimmedFields(name=' 1', comment='')
         test.save()
@@ -177,6 +176,7 @@ class FieldTestCase(unittest.TestCase):
 
     def tearDown(self):
         pass
+
 
 class FormFieldTestCase(unittest.TestCase):
     def setUp(self):
@@ -200,9 +200,9 @@ class FormFieldTestCase(unittest.TestCase):
         self.assertTrue(form.validate())
         self.assertEqual(form.data['date'], datetime.datetime(2012, 9, 6, 1, 29, 14))
 
+
 class SecretTestCase(unittest.TestCase):
     def test_encrypted_field(self):
-        from mongoengine import connection
         col = connection._get_db().secret
 
         # Test creating password
@@ -255,7 +255,8 @@ class SecretTestCase(unittest.TestCase):
             s.reload()
             self.assertEqual(s.password, pw)
 
-class TestSafeReferenceListField(unittest.TestCase):
+
+class SafeReferenceListFieldTestCase(unittest.TestCase):
     def test_safe_reference_list_field(self):
         b1 = Book.objects.create()
         b2 = Book.objects.create()
@@ -306,7 +307,7 @@ class ApplyRecursivelyTestCase(unittest.TestCase):
         )
 
 
-class TestISortedSet(unittest.TestCase):
+class ISortedSetTestCase(unittest.TestCase):
     def test_isortedset(self):
         s = isortedset(['Z', 'b', 'A'])
         self.assertEqual(list(s), ['A', 'b', 'Z'])
@@ -324,7 +325,8 @@ class TestISortedSet(unittest.TestCase):
         self.assertTrue('a' in s)
         self.assertTrue('A' in s)
 
-class TestLowerField(unittest.TestCase):
+
+class LowerFieldTestCase(unittest.TestCase):
 
     def test_case_insensitive_query(self):
 
@@ -341,16 +343,6 @@ class TestLowerField(unittest.TestCase):
         self.assertEqual(obj1, obj2)
 
         Test.drop_collection()
-
-    def test_case_insensitive_uniqueness(self):
-
-        class Test(db.Document):
-            field = LowerStringField(unique=True)
-
-        Test.drop_collection()
-
-        Test(field='whatever').save()
-        self.assertRaises(NotUniqueError, Test(field='WHATEVER').save)
 
     def test_case_insensitive_uniqueness(self):
 
@@ -408,6 +400,69 @@ class SlugifyTestCase(unittest.TestCase):
     def test_slugify(self):
         self.assertEqual(slugify('  Foo  ???BAR\t\n\r'), 'foo_bar')
         self.assertEqual(slugify(u'äąé öóü', '-'), 'aae-oou')
+
+
+class FetchRelatedTestCase(unittest.TestCase):
+
+    def setUp(self):
+        super(FetchRelatedTestCase, self).setUp()
+
+        class A(db.Document):
+            txt = StringField()
+
+        class B(db.Document):
+            ref = ReferenceField(A)
+
+        class C(db.Document):
+            ref_a = ReferenceField(A)
+
+        A.drop_collection()
+        B.drop_collection()
+        C.drop_collection()
+
+        self.A = A
+        self.B = B
+        self.C = C
+
+        self.a1 = A.objects.create(txt='a1')
+        self.a2 = A.objects.create(txt='a2')
+        self.a3 = A.objects.create(txt='a3')
+        self.b1 = B.objects.create(ref=self.a1)
+        self.b2 = B.objects.create(ref=self.a2)
+        self.c1 = C.objects.create(ref_a=self.a3)
+
+    def test_fetch_related(self):
+        with custom_query_counter() as q:
+            objs = list(self.B.objects.all())
+            fetch_related(objs, {
+                'ref': True
+            })
+
+            # make sure A objs are fetched
+            for obj in objs:
+                obj.ref.txt == 'whatever'
+
+            # one query for B, one query for A
+            self.assertEqual(q, 2)
+
+    def test_fetch_related_multiple_objs(self):
+        with custom_query_counter() as q:
+            objs = list(self.B.objects.all()) + list(self.C.objects.all())
+            fetch_related(objs, {
+                'ref': True,
+                'ref_a': True
+            })
+
+            # make sure A objs are fetched
+            for obj in objs:
+                if isinstance(obj, self.B):
+                    obj.ref.txt == 'whatever'
+                else:
+                    obj.ref_a.txt == 'whatever'
+
+            # one query for B, one for C, one for A
+            self.assertEqual(q, 3)
+
 
 if __name__ == '__main__':
     unittest.main()
