@@ -3,10 +3,16 @@ import datetime
 from zbase62 import zbase62
 from mongoengine import *
 from mongoengine.queryset import OperationError
+from mongoengine.errors import ValidationError
 
+class StringIdField(StringField):
+    def to_mongo(self, value):
+        if not isinstance(value, basestring):
+            raise ValidationError('StringIdField only accepts string values.')
+        return super(StringIdField, self).to_mongo(value)
 
 class RandomPKDocument(Document):
-    id = StringField(unique=True, primary_key=True)
+    id = StringIdField(unique=True, primary_key=True)
 
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__, self.id)
@@ -114,9 +120,17 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     In this sample, users and leads for all objs will be fetched and attached.
     Then, created_by and updated_by users are fetched in one query and attached.
+
     Note that the function doesn't merge queries for the same document class
     across multiple (recursive) function calls, but it never fetches the same
     related object twice.
+
+    If you need to call fetch_related multiple times, it's worth passing a
+    cache_map (initially it can be an empty dictionary). It will be extended
+    during each call to include all the objects fetched up until the current
+    call. This way we ensure that the same objects aren't fetched more than
+    once across multiple fetch_related calls. Cache map has a form of:
+    { DocumentClass: [list, of, objects, fetched, for, a, given, class] }.
     """
 
     if not objs:
@@ -138,8 +152,23 @@ def fetch_related(objs, field_dict, cache_map=None):
         else:
             return val
 
-    instance = objs[0]
+    def get_instance_for_each_type(objs):
+        instances = []
+        types = []
+        for obj in objs:
+            if type(obj) not in types:
+                instances.append(obj)
+                types.append(type(obj))
+        return instances
+
+    instances = get_instance_for_each_type(objs)
     for field_name, sub_field_dict in field_dict.iteritems():
+
+        instance = [instance for instance in instances if field_name in instance.__class__._fields]
+        if not instance:
+            continue  # None of the objects contains this field
+
+        instance = instance[0]
         field = instance.__class__._fields[field_name]
         db_field = instance._db_field_map.get(field_name, field_name)
         if isinstance(field, ReferenceField): # includes SafeReferenceListField
@@ -152,12 +181,14 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     # Determine what IDs we want to fetch
     for field_name, sub_field_dict in field_dict.iteritems():
-        field, db_field, document_class = field_cache[field_name]
+        field, db_field, document_class = field_cache.get(field_name) or (None, None, None)
+        if not field:
+            continue
 
         if isinstance(field, SafeReferenceField):
             refs = [id_from_value(field, obj._db_data.get(db_field, None)) for obj in objs if field_name not in obj._internal_data and obj._db_data.get(db_field, None)]
         elif isinstance(field, ReferenceField):
-            refs = [getattr(obj, field_name).pk for obj in objs if getattr(getattr(obj, field_name), '_lazy', False)]
+            refs = [getattr(obj, field_name).pk for obj in objs if getattr(obj, field_name, None) and getattr(getattr(obj, field_name), '_lazy', False)]
         elif isinstance(field, SafeReferenceListField):
             refs = [obj._db_data.get(db_field, []) for obj in objs if field_name not in obj._internal_data]
             refs = [id_from_value(field.field, item) for sublist in refs for item in sublist] # flatten
@@ -187,7 +218,10 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     # Assign objects
     for field_name, sub_field_dict in field_dict.iteritems():
-        field, db_field, document_class = field_cache[field_name]
+        field, db_field, document_class = field_cache.get(field_name) or (None, None, None)
+
+        if not field:
+            continue
 
         rel_obj_map = cache_map.get(document_class)
         if rel_obj_map:
@@ -203,7 +237,7 @@ def fetch_related(objs, field_dict, cache_map=None):
                             setattr(obj, field_name, rel_obj_map.get(id_from_value(field, val)))
 
                 elif isinstance(field, ReferenceField):
-                    val = getattr(obj, field_name)
+                    val = getattr(obj, field_name, None)
                     if val and getattr(val, '_lazy', False):
                         rel_obj = rel_obj_map.get(val.pk)
                         if rel_obj:

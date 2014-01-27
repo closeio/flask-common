@@ -102,10 +102,9 @@ class PhoneField(StringField):
     Field that performs phone number validation.
     Values are stored in the format "+14151231234x123" in MongoDB and displayed
     in the format "+1 415-123-1234 ext. 123" in Python.
-
-    Numbers are assumed to be in the international E164 format: +441138680428
     """
 
+<<<<<<< HEAD
     @classmethod
     def _parse(cls, value, region=None):
         # valid numbers don't start with the same digit(s) as their country code so we strip them
@@ -115,7 +114,7 @@ class PhoneField(StringField):
 
         parsed = phonenumbers.parse(value, region)
 
-        # strip empty extension for US
+        # strip empty extension
         if parsed.country_code == 1 and len(str(parsed.national_number)) > 10:
             regex = re.compile('.+\s*e?xt?\.?\s*$')
             if regex.match(value):
@@ -129,7 +128,6 @@ class PhoneField(StringField):
     def validate(self, value):
         if not self.required and not value:
             return None
-
         try:
             number = PhoneField._parse(value)
             """
@@ -141,7 +139,7 @@ class PhoneField(StringField):
             self.error('Phone is not valid')
 
     def from_python(self, value):
-        return PhoneField.to_raw_phone(value)
+        return self.to_raw_phone(value)
 
     def _get_formatted_phone(self, value, form):
         if isinstance(value, basestring) and value != '':
@@ -158,8 +156,7 @@ class PhoneField(StringField):
     def to_local_formatted_phone(self, value):
         return self._get_formatted_phone(value, phonenumbers.PhoneNumberFormat.NATIONAL)
 
-    @classmethod
-    def to_raw_phone(cls, value, region=None):
+    def to_raw_phone(self, value):
         if isinstance(value, basestring) and value != '':
             try:
                 phone = PhoneField._parse(value, region)
@@ -171,7 +168,7 @@ class PhoneField(StringField):
         return value
 
     def prepare_query_value(self, op, value):
-        return PhoneField.to_raw_phone(value)
+        return self.to_raw_phone(value)
 
 
 class EncryptedStringField(BinaryField):
