@@ -104,7 +104,6 @@ class PhoneField(StringField):
     in the format "+1 415-123-1234 ext. 123" in Python.
     """
 
-<<<<<<< HEAD
     @classmethod
     def _parse(cls, value, region=None):
         # valid numbers don't start with the same digit(s) as their country code so we strip them
@@ -139,7 +138,7 @@ class PhoneField(StringField):
             self.error('Phone is not valid')
 
     def from_python(self, value):
-        return self.to_raw_phone(value)
+        return PhoneField.to_raw_phone(value)
 
     def _get_formatted_phone(self, value, form):
         if isinstance(value, basestring) and value != '':
@@ -156,7 +155,8 @@ class PhoneField(StringField):
     def to_local_formatted_phone(self, value):
         return self._get_formatted_phone(value, phonenumbers.PhoneNumberFormat.NATIONAL)
 
-    def to_raw_phone(self, value):
+    @classmethod
+    def to_raw_phone(self, value, region=None):
         if isinstance(value, basestring) and value != '':
             try:
                 phone = PhoneField._parse(value, region)
@@ -168,7 +168,7 @@ class PhoneField(StringField):
         return value
 
     def prepare_query_value(self, op, value):
-        return self.to_raw_phone(value)
+        return PhoneField.to_raw_phone(value)
 
 
 class EncryptedStringField(BinaryField):
