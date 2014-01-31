@@ -24,13 +24,14 @@ class ApiClient(Client):
             kwargs['headers'] = self.get_headers(api_key)
         return super(ApiClient, self).open(*args, **kwargs)
 
-def local_request(view, args=None, user=None, view_args=None):
+def local_request(view, args=None, user=None, view_args=None, api_key=None):
     from flask import current_app
     if not view_args:
         view_args = {}
     ctx = current_app.test_request_context()
     ctx.request.args = args
     ctx.user = user
+    ctx.g.api_key = api_key
     ctx.push()
     data = view.dispatch_request(**view_args).data
     json_data = json.loads(data)
