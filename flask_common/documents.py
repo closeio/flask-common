@@ -214,9 +214,7 @@ def fetch_related(objs, field_dict, cache_map=None):
         if id_set:
             id_set = list(id_set)
             if len(id_set) == 1:
-                rel_obj_map.update(
-                    { id_set[0]: document_class.objects.get(pk=id_set[0]) }
-                )
+                rel_obj_map.update({ id_set[0]: document_class.objects.filter(pk=id_set[0]).first() })
             else:
                 rel_obj_map.update(
                     document_class.objects.in_bulk(id_set)
