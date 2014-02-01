@@ -212,9 +212,15 @@ def fetch_related(objs, field_dict, cache_map=None):
         rel_obj_map = cache_map[document_class]
 
         if id_set:
-            rel_obj_map.update(
-                document_class.objects.in_bulk(list(id_set))
-            )
+            id_set = list(id_set)
+            if len(id_set) == 1:
+                rel_obj_map.update(
+                    { id_set[0]: document_class.objects.get(pk=id_set[0]) }
+                )
+            else:
+                rel_obj_map.update(
+                    document_class.objects.in_bulk(id_set)
+                )
 
     # Assign objects
     for field_name, sub_field_dict in field_dict.iteritems():
