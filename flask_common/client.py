@@ -1,7 +1,8 @@
-from werkzeug.test import Client as werkzeug_test_client
-from werkzeug.datastructures import Headers
 import base64
 import json
+from flask import current_app
+from werkzeug.datastructures import Headers
+from werkzeug.test import Client as werkzeug_test_client
 
 class Client(werkzeug_test_client):
     pass
@@ -24,13 +25,13 @@ class ApiClient(Client):
             kwargs['headers'] = self.get_headers(api_key)
         return super(ApiClient, self).open(*args, **kwargs)
 
-def local_request(view, args=None, user=None, view_args=None):
-    from flask import current_app
+def local_request(view, args=None, user=None, view_args=None, api_key=None):
     if not view_args:
         view_args = {}
     ctx = current_app.test_request_context()
     ctx.request.args = args
     ctx.user = user
+    ctx.g.api_key = api_key
     ctx.push()
     data = view.dispatch_request(**view_args).data
     json_data = json.loads(data)
