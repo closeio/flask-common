@@ -159,10 +159,14 @@ class PhoneField(StringField):
     def to_raw_phone(self, value, region=None):
         if isinstance(value, basestring) and value != '':
             try:
-                phone = PhoneField._parse(value, region)
-                value = phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.E164)
+                number = value
+                if not region and not number.startswith('+'):
+                    number = '+'+number
+                phone = PhoneField._parse(number, region)
+                number = phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.E164)
                 if phone.extension:
-                    value += 'x%s' % phone.extension
+                    number += 'x%s' % phone.extension
+                return number
             except phonenumbers.NumberParseException:
                 pass
         return value
