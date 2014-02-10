@@ -25,7 +25,7 @@ class ApiClient(Client):
             kwargs['headers'] = self.get_headers(api_key)
         resp = super(ApiClient, self).open(*args, **kwargs)
         try:
-            resp.json = json.loads(resp.data)
+            resp.json = lambda: json.loads(resp.data)
         except ValueError:
             pass
         return resp
