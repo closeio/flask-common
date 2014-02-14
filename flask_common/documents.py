@@ -54,8 +54,8 @@ class RandomPKDocument(Document):
     }
 
 class DocumentBase(Document):
-    date_created = DateTimeField()
-    date_updated = DateTimeField()
+    date_created = DateTimeField(required=True)
+    date_updated = DateTimeField(required=True)
 
     def _type(self):
         return unicode(self.__class__.__name__)
