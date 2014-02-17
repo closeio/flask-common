@@ -23,7 +23,12 @@ class ApiClient(Client):
             kwargs['data'] = json.dumps(kwargs.pop('json'))
         if 'headers' not in kwargs:
             kwargs['headers'] = self.get_headers(api_key)
-        return super(ApiClient, self).open(*args, **kwargs)
+        resp = super(ApiClient, self).open(*args, **kwargs)
+        try:
+            resp.json = lambda: json.loads(resp.data)
+        except ValueError:
+            pass
+        return resp
 
 def local_request(view, args=None, user=None, view_args=None, api_key=None):
     if not view_args:
