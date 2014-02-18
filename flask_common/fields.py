@@ -160,8 +160,6 @@ class PhoneField(StringField):
         if isinstance(value, basestring) and value != '':
             try:
                 number = value
-                if not region and not number.startswith('+'):
-                    number = '+'+number
                 phone = PhoneField._parse(number, region)
                 number = phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.E164)
                 if phone.extension:
