@@ -220,6 +220,15 @@ def make_unaware(d):
         return d.replace(tzinfo=None)
 
 
+def mail_admins(subject, body):
+    current_app.mail.send(Message(
+        subject,
+        sender=current_app.config['SERVER_EMAIL'],
+        recipients=current_app.config['ADMINS'],
+        body=body,
+    ))
+
+
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
     exc_info = sys.exc_info()
 
