@@ -221,12 +221,19 @@ def make_unaware(d):
 
 
 def mail_admins(subject, body):
-    current_app.mail.send(Message(
-        subject,
-        sender=current_app.config['SERVER_EMAIL'],
-        recipients=current_app.config['ADMINS'],
-        body=body,
-    ))
+    if not current_app.testing:
+        if current_app.debug:
+            print 'Sending mail_admins:'
+            print 'Subject: {0}'.format(subject)
+            print
+            print body
+        else:
+            current_app.mail.send(Message(
+                subject,
+                sender=current_app.config['SERVER_EMAIL'],
+                recipients=current_app.config['ADMINS'],
+                body=body,
+            ))
 
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
