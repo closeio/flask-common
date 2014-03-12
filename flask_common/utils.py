@@ -220,7 +220,9 @@ def make_unaware(d):
         return d.replace(tzinfo=None)
 
 
-def mail_admins(subject, body):
+def mail_admins(subject, body, recipients=None):
+    if recipients == None:
+        recipients = current_app.config['ADMINS']
     if not current_app.testing:
         if current_app.debug:
             print 'Sending mail_admins:'
@@ -231,7 +233,7 @@ def mail_admins(subject, body):
             current_app.mail.send(Message(
                 subject,
                 sender=current_app.config['SERVER_EMAIL'],
-                recipients=current_app.config['ADMINS'],
+                recipients=recipients,
                 body=body,
             ))
 
