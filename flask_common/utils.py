@@ -201,8 +201,16 @@ def utctime():
     return calendar.timegm(datetime.datetime.utcnow().utctimetuple())
 
 
-def localtoday(tz):
-    local_now = tz.normalize(pytz.utc.localize(datetime.datetime.utcnow()).astimezone(tz))
+def localtoday(tz_or_offset):
+    """
+    Returns the local today date based on either a timezone object or on a UTC
+    offset in hours.
+    """
+    utc_now = datetime.datetime.utcnow()
+    try:
+        local_now = tz_or_offset.normalize(pytz.utc.localize(utc_now).astimezone(tz_or_offset))
+    except AttributeError: # tz has no attribute normalize, assume numeric offset
+        local_now = utc_now + datetime.timedelta(hours=tz_or_offset)
     local_today = datetime.date(*local_now.timetuple()[:3])
     return local_today
 
