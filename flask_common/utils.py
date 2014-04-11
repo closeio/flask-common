@@ -201,8 +201,16 @@ def utctime():
     return calendar.timegm(datetime.datetime.utcnow().utctimetuple())
 
 
-def localtoday(tz):
-    local_now = tz.normalize(pytz.utc.localize(datetime.datetime.utcnow()).astimezone(tz))
+def localtoday(tz_or_offset):
+    """
+    Returns the local today date based on either a timezone object or on a UTC
+    offset in hours.
+    """
+    utc_now = datetime.datetime.utcnow()
+    try:
+        local_now = tz_or_offset.normalize(pytz.utc.localize(utc_now).astimezone(tz_or_offset))
+    except AttributeError: # tz has no attribute normalize, assume numeric offset
+        local_now = utc_now + datetime.timedelta(hours=tz_or_offset)
     local_today = datetime.date(*local_now.timetuple()[:3])
     return local_today
 
@@ -218,6 +226,24 @@ def make_unaware(d):
         return d.astimezone(pytz.utc).replace(tzinfo=None)
     else:
         return d.replace(tzinfo=None)
+
+
+def mail_admins(subject, body, recipients=None):
+    if recipients == None:
+        recipients = current_app.config['ADMINS']
+    if not current_app.testing:
+        if current_app.debug:
+            print 'Sending mail_admins:'
+            print 'Subject: {0}'.format(subject)
+            print
+            print body
+        else:
+            current_app.mail.send(Message(
+                subject,
+                sender=current_app.config['SERVER_EMAIL'],
+                recipients=recipients,
+                body=body,
+            ))
 
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
