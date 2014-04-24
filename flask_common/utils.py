@@ -586,7 +586,7 @@ class custom_query_counter(query_counter):
         if self.verbose:
             print '-'*80
             for query in queries:
-                print query['ns'], query.get('query')
+                print query['ns'], '[{}]'.format(query['op']), query.get('query')
                 print
             print '-'*80
         count = queries.count()
