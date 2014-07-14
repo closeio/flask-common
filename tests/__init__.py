@@ -129,9 +129,8 @@ class FieldTestCase(unittest.TestCase):
         TestTrimmedFields.drop_collection()
 
     def test_format_number(self):
-        phone = Phone(phone='4151231234')
-        assert phone.phone == '+14151231234'
-        phone.validate()
+        phone = Phone(phone='14151231234')
+        assert phone.phone == '14151231234'
 
         phone.phone = 'notaphone'
         assert phone.phone == 'notaphone'
@@ -144,7 +143,7 @@ class FieldTestCase(unittest.TestCase):
 
         phone.save()
 
-        assert phone.id == Phone.objects.get(phone='6506181234x768').id
+        assert phone.id == Phone.objects.get(phone='+16506181234x768').id
         assert phone.id == Phone.objects.get(phone='+1 650-618-1234 ext 768').id
 
     def test_timezone_field(self):
