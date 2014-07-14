@@ -3,6 +3,7 @@ import codecs
 import csv
 import cStringIO
 import datetime
+import itertools
 import pytz
 import re
 import signal
@@ -19,7 +20,6 @@ from email.utils import formatdate
 from flask import current_app, request, Response
 from flask.ext.mail import Message
 from functools import wraps
-from itertools import chain
 from logging.handlers import SMTPHandler
 from mongoengine.context_managers import query_counter
 from smtplib import SMTPDataError
@@ -552,7 +552,7 @@ class NormalizationReader(Reader):
 
 def build_normalization_map(filename, case_sensitive=False):
     normalizations = NormalizationReader(filename)
-    return dict(list(chain.from_iterable([[(token if case_sensitive else token.lower(), normalization.normalized_form) for token in normalization.tokens] for normalization in normalizations])))
+    return dict(list(itertools.chain.from_iterable([[(token if case_sensitive else token.lower(), normalization.normalized_form) for token in normalization.tokens] for normalization in normalizations])))
 
 
 class custom_query_counter(query_counter):
@@ -591,4 +591,34 @@ class custom_query_counter(query_counter):
             print '-'*80
         count = queries.count()
         return count
+
+def truncate(text, size):
+    """
+    Truncates the given text to the given size. If we are in the middle of
+    a word, we will extend until the end of the word, e.g.
+
+    >>> truncate('I can haz cheeseburgers', 9)
+     'I can haz'
+    >>> truncate('I can haz cheeseburgers', 10)
+     'I can haz cheeseburgers'
+    """
+    if text and text[size:].find(' ') != -1:
+        return text[:size+text[size:].find(' ')]
+    else:
+        return text
+
+def combine(*lists):
+    """
+    Generate all the combinations for multiple sets of words, e.g.
+
+    >>> combine(['first'], ['communication', 'communicated'], ['', 'date'])
+     ['first_communication',
+      'first_communication_date',
+      'first_communicated',
+      'first_communicated_date']
+    """
+    if len(lists) == 1:
+        return lists[0]
+    else:
+        return ['_'.join([s for s in p if s]) for p in itertools.product(lists[0], combine(*lists[1:]))]
 
