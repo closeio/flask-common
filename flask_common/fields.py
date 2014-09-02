@@ -104,6 +104,10 @@ class PhoneField(StringField):
     in the format "+1 415-123-1234 ext. 123" in Python.
     """
 
+    def __init__(self, *args, **kwargs):
+        self._strict_validation = kwargs.pop('strict', False)
+        super(PhoneField, self).__init__(*args, **kwargs)
+
     @classmethod
     def _parse(cls, value, region=None):
         # valid numbers don't start with the same digit(s) as their country code so we strip them
@@ -129,11 +133,10 @@ class PhoneField(StringField):
             return None
         try:
             number = PhoneField._parse(value)
-            """
-            # For now we don't enforce strict number validation since callers can fake their CLID
-            if not phonenumbers.is_valid_number(number):
+
+            if self._strict_validation and not phonenumbers.is_valid_number(number):
                 raise phonenumbers.NumberParseException(phonenumbers.NumberParseException.NOT_A_NUMBER, 'Not a valid number')
-            """
+
         except phonenumbers.NumberParseException:
             self.error('Phone is not valid')
 

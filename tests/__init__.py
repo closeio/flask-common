@@ -38,6 +38,7 @@ db = MongoEngine(app)
 
 class Phone(db.Document):
     phone = PhoneField()
+    strict_phone = PhoneField(strict=True)
 
 class Location(db.Document):
     timezone = TimezoneField()
@@ -145,6 +146,17 @@ class FieldTestCase(unittest.TestCase):
 
         assert phone.id == Phone.objects.get(phone='+16506181234x768').id
         assert phone.id == Phone.objects.get(phone='+1 650-618-1234 ext 768').id
+
+    def test_strict_format_number(self):
+        phone = Phone(strict_phone='12223334444')
+        self.assertRaises(ValidationError, phone.validate)
+        self.assertRaises(ValidationError, phone.save)
+
+        phone = Phone(phone='+6594772797')
+        assert phone.phone == '+6594772797'
+
+        phone.save()
+
 
     def test_timezone_field(self):
         location = Location()
