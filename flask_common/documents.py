@@ -8,7 +8,7 @@ from mongoengine.errors import ValidationError
 class StringIdField(StringField):
     def to_mongo(self, value):
         if not isinstance(value, basestring):
-            raise ValidationError('StringIdField only accepts string values.')
+            raise ValidationError(errors={self.name: 'StringIdField only accepts string values.'})
         return super(StringIdField, self).to_mongo(value)
 
 class RandomPKDocument(Document):
