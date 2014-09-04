@@ -131,14 +131,16 @@ class PhoneField(StringField):
     def validate(self, value):
         if not self.required and not value:
             return None
+
+        error_msg = 'Phone number is not valid. Please use the international format like +16505551234'
         try:
             number = PhoneField._parse(value)
 
             if self._strict_validation and not phonenumbers.is_valid_number(number):
-                raise phonenumbers.NumberParseException(phonenumbers.NumberParseException.NOT_A_NUMBER, 'Not a valid number')
+                raise phonenumbers.NumberParseException(phonenumbers.NumberParseException.NOT_A_NUMBER, error_msg)
 
         except phonenumbers.NumberParseException:
-            self.error('Phone is not valid')
+            self.error(error_msg)
 
     def from_python(self, value):
         return PhoneField.to_raw_phone(value)
@@ -151,7 +153,7 @@ class PhoneField(StringField):
             except phonenumbers.NumberParseException:
                 pass
         return value
-    
+
     def to_formatted_phone(self, value):
         return self._get_formatted_phone(value, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
 
