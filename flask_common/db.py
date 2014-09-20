@@ -9,13 +9,17 @@ __all__ = ['MongoReference', 'MongoEmbedded', 'MongoEmbeddedList', 'Base', 'User
 
 def MongoReference(field, ref_cls):
     """
-    Reference to a MongoDB table. Note that a new instance is returned every
-    time we access, and no caching is performed.
+    Reference to a MongoDB table. The value is cached until an assignment is
+    made.
     """
-    # TODO: we should probably cache this
     def _get(obj):
-        return ref_cls.objects.get(pk=getattr(obj, field))
+        if not hasattr(obj, '_%s__cache' % field):
+            setattr(obj, '_%s__cache' % field,
+                ref_cls.objects.get(pk=getattr(obj, field)))
+        return getattr(obj, '_%s__cache' % field)
     def _set(obj, val):
+        if hasattr(obj, '_%s__cache' % field):
+            delattr(obj, '_%s__cache')
         if isinstance(val, ref_cls):
             val = val.pk
         if isinstance(val, ObjectId):
