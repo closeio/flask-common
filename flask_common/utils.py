@@ -11,6 +11,7 @@ import smtplib
 import sys
 import thread
 import threading
+import time
 import traceback
 import unidecode
 import StringIO
@@ -622,3 +623,12 @@ def combine(*lists):
     else:
         return ['_'.join([s for s in p if s]) for p in itertools.product(lists[0], combine(*lists[1:]))]
 
+def retry(func, exc, tries, wait):
+    while True:
+        try:
+            return func()
+        except exc:
+            tries -= 1
+            if tries <= 0:
+                raise
+            time.sleep(wait)
