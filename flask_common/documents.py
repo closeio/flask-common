@@ -79,9 +79,9 @@ class NotDeletedQuerySet(QuerySet):
     def __call__(self, q_obj=None, class_check=True, slave_okay=False, read_preference=None, include_deleted=False, **query):
         if not include_deleted:
             if q_obj:
-                q_obj &= Q(is_deleted=False)
+                q_obj &= Q(is_deleted__ne=True)
             else:
-                q_obj = Q(is_deleted=False)
+                q_obj = Q(is_deleted__ne=True)
         return super(NotDeletedQuerySet, self).__call__(q_obj, class_check, slave_okay, read_preference, **query)
 
 class SoftDeleteDocument(Document):
