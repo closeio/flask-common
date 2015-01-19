@@ -162,6 +162,17 @@ def fetch_related(objs, field_dict, cache_map=None):
                 types.append(type(obj))
         return instances
 
+    def setattr_unchanged(obj, key, val):
+        """
+        Sets an attribute on the given document object without changing the
+        _changed_fields set. This is because we don't actually modify the
+        related objects.
+        """
+        changed = key in obj._changed_fields
+        setattr(obj, key, val)
+        if not changed and key in obj._changed_fields:
+            obj._changed_fields.remove(key)
+
     instances = get_instance_for_each_type(objs)
     for field_name, sub_field_dict in field_dict.iteritems():
 
@@ -239,16 +250,18 @@ def fetch_related(objs, field_dict, cache_map=None):
                     if field_name not in obj._internal_data:
                         val = obj._db_data.get(db_field, None)
                         if val:
-                            setattr(obj, field_name, rel_obj_map.get(id_from_value(field, val)))
+                            setattr_unchanged(obj, field_name,
+                                    rel_obj_map.get(id_from_value(field, val)))
 
                 elif isinstance(field, ReferenceField):
                     val = getattr(obj, field_name, None)
                     if val and getattr(val, '_lazy', False):
                         rel_obj = rel_obj_map.get(val.pk)
                         if rel_obj:
-                            setattr(obj, field_name, rel_obj)
+                            setattr_unchanged(obj, field_name, rel_obj)
 
                 elif isinstance(field, SafeReferenceListField):
                     if field_name not in obj._internal_data:
-                        setattr(obj, field_name, filter(None, [rel_obj_map.get(id_from_value(field.field, val)) for val in obj._db_data.get(db_field, [])]))
-
+                        value = filter(None, [rel_obj_map.get(id_from_value(field.field, val))
+                                for val in obj._db_data.get(db_field, [])])
+                        setattr_unchanged(obj, field_name, value)
