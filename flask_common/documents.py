@@ -163,6 +163,11 @@ def fetch_related(objs, field_dict, cache_map=None):
         return instances
 
     def setattr_unchanged(obj, key, val):
+        """
+        Sets an attribute on the given document object without changing the
+        _changed_fields set. This is because we don't actually modify the
+        related objects.
+        """
         changed = key in obj._changed_fields
         setattr(obj, key, val)
         if not changed and key in obj._changed_fields:
