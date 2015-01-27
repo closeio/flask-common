@@ -38,7 +38,13 @@ def local_request(view, args=None, user=None, view_args=None, api_key=None):
     ctx.user = user
     ctx.g.api_key = api_key
     ctx.push()
-    data = view.dispatch_request(**view_args).data
-    json_data = json.loads(data)
-    ctx.pop()
+    try:
+        data = view.dispatch_request(**view_args).data
+        json_data = json.loads(data)
+    except Exception as e:
+        ctx.pop()
+        raise e
+    else:
+        ctx.pop()
+
     return json_data
