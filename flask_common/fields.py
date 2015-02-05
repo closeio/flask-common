@@ -175,7 +175,7 @@ class PhoneField(StringField):
         return value
 
     def prepare_query_value(self, op, value):
-        return PhoneField.to_raw_phone(value)
+        return super(PhoneField, self).prepare_query_value(op, PhoneField.to_raw_phone(value))
 
 
 class EncryptedStringField(BinaryField):
