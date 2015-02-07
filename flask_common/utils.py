@@ -632,3 +632,17 @@ def retry(func, exc, tries, wait):
             if tries <= 0:
                 raise
             time.sleep(wait)
+
+class lazylist(object):
+    """
+    An object that can be iterated like a list, where the data is only loaded
+    from the given function at the first iteration.
+    """
+    def __init__(self, f):
+        self.f = f
+        self.data = None
+
+    def __getitem__(self, key):
+        if self.data is None:
+            self.data = list(self.f())
+        return self.data[key]
