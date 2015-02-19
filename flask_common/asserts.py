@@ -1,8 +1,12 @@
-def response_success(response, code=None):
-    if code is None:
-        assert 200 <= response.status_code < 300, 'Received %d response: %s' % (response.status_code, response.data)
-    else:
-        assert code == response.status_code, 'Received %d response: %s' % (response.status_code, response.data)
+def response_success(response, code=None, exception_class=None):
+    if exception_class is None:
+        exception_class = AssertionError
+
+    if (
+        (code is None and (response.status_code >= 300 or response.status_code < 200)) or
+        (code and code != response.status_code)
+    ):
+        raise exception_class('Received %d response: %s' % (response.status_code, response.data))
 
 def validation_error(response, content_type='application/json'):
     assert content_type in response.content_type, 'Invalid content-type: %s' % response.content_type
