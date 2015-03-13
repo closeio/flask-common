@@ -137,7 +137,7 @@ def fetch_related(objs, field_dict, cache_map=None):
     if not objs:
         return
 
-    if not cache_map:
+    if cache_map == None:
         # list of objects that we fetched, over all iterations / from previous calls, by document class
         cache_map = {}
 
