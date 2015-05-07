@@ -623,15 +623,44 @@ def combine(*lists):
     else:
         return ['_'.join([s for s in p if s]) for p in itertools.product(lists[0], combine(*lists[1:]))]
 
-def retry(func, exc, tries, wait):
-    while True:
-        try:
-            return func()
-        except exc:
-            tries -= 1
-            if tries <= 0:
-                raise
-            time.sleep(wait)
+def retry(func=None, exc=Exception, tries=1, wait=0):
+    """
+    A way to retry a function call up to [tries] times if it throws
+    a [exc] exception, with [wait] seconds in between.
+
+    Can be used directly, or as a decorator factory.
+
+    Example Usage 1:
+        retry(unreliable_function, exc=ValueError, tries=5, wait=1)
+
+    Example Usage 2 (passing args):
+        retry(lambda x, y: unreliable_function(x, y), exc=ValueError, tries=5, wait=1)
+
+    Example Usage 3 (as a decorator generator)
+        @retry(exc=ValueError, tries=10, wait=0.3)
+        def unreliable_function(foo):
+            # ...
+        unreliable_function('boy')
+    """
+    def _retry(func):
+        tries_left = tries
+        while True:
+            try:
+                return func()
+            except exc:
+                tries_left -= 1
+                if tries_left <= 0:
+                    raise
+                time.sleep(wait)
+
+    if func is None:
+        # Being used as a decorator generator
+        def retry_decorator(func):
+            return lambda *args, **kwargs: _retry(lambda: func(*args, **kwargs))
+        return retry_decorator
+    else:
+        # Being used directly
+        return _retry(func)
 
 class lazylist(object):
     """
