@@ -3,6 +3,7 @@ import codecs
 import csv
 import cStringIO
 import datetime
+import dateutil.parser
 import itertools
 import pytz
 import re
@@ -227,6 +228,77 @@ def make_unaware(d):
         return d.astimezone(pytz.utc).replace(tzinfo=None)
     else:
         return d.replace(tzinfo=None)
+
+
+def _gen_tz_info_dict():
+    """
+    Generates the timezone info dict to be passed to dateutil's parse method.
+    Since TZ names are ambiguous we prefer the common ones.
+    """
+
+    # Adapted from http://stackoverflow.com/questions/1703546/parsing-date-time-string-with-timezone-abbreviated-name-in-python
+
+    tz_str = '''-12 Y
+-11 X NUT SST
+-10 W CKT HAST HST TAHT TKT
+-9.5 MART MIT
+-9 V AKST GAMT GIT HADT HNY
+-8 U AKDT CIST HAY HNP PST PT
+-7 T HAP HNR MST PDT
+-6 S CST EAST GALT HAR HNC MDT
+-5 R CDT COT EASST ECT EST ET HAC HNE PET
+-4.5 HLV VET
+-4 Q AST BOT CLT COST EDT FKT GYT HAE HNA PYT
+-3.5 HNT NST NT
+-3 P ADT ART BRT CLST FKST GFT HAA PMST PYST SRT UYT WGT
+-2.5 HAT NDT
+-2 O BRST FNT PMDT UYST WGST
+-1 N AZOT CVT EGT
+0 Z EGST GMT UTC WET WT
+1 A CET DFT WAT WEDT WEST IST
+2 B CAT CEDT CEST EET SAST WAST
+3 C EAT EEDT EEST IDT MSK
+3.5 IRST
+4 D AMT AZT GET GST KUYT MSD MUT RET SAMT SCT
+4.5 AFT IRDT
+5 E AMST AQTT AZST HMT MAWT MVT PKT TFT TJT TMT UZT YEKT
+5.5 SLT
+5.75 NPT
+6 F ALMT BIOT BTT IOT KGT NOVT OMST YEKST
+6.5 CCT MMT
+7 G CXT DAVT HOVT ICT KRAT NOVST OMSST THA WIB
+8 H ACT AWST BDT BNT CAST HKT IRKT KRAST MYT PHT SGT ULAT WITA WST
+9 I AWDT IRKST JST KST PWT TLT WDT WIT YAKT
+9.5 ACST
+10 K AEST ChST PGT VLAT YAKST YAPT
+10.5 ACDT LHST
+11 L AEDT LHDT MAGT NCT PONT SBT VLAST VUT
+11.5 NFT
+12 M ANAST ANAT FJT GILT MAGST MHT NZST PETST PETT TVT WFT
+12.75 CHAST
+13 FJST NZDT PHOT TOT
+13.75 CHADT
+14 LINT'''
+
+    tzd = {}
+    for tz_descr in map(str.split, tz_str.split('\n')):
+        tz_offset = int(float(tz_descr[0]) * 3600)
+        for tz_code in tz_descr[1:]:
+            assert tz_code not in tzd, "duplicate TZ alias detected"
+            tzd[tz_code] = tz_offset
+    return tzd
+
+_tz_info_dict = _gen_tz_info_dict()
+
+def parse_date_tz(date):
+    """
+    Attempts to parse the date, taking common timezone offsets into account. An
+    aware or unaware datetime is returned on success, otherwise None.
+    """
+    try:
+        return dateutil.parser.parse(date, tzinfos=_tz_info_dict)
+    except (AttributeError, ValueError):
+        return
 
 
 def mail_admins(subject, body, recipients=None):
