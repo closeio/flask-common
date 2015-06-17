@@ -78,11 +78,8 @@ class DocumentBase(Document):
 class NotDeletedQuerySet(QuerySet):
     def __call__(self, q_obj=None, class_check=True, slave_okay=False, read_preference=None, **query):
         # we don't use __ne=True here, because $ne isn't a selective query and doesn't utilize an index in the most efficient manner (http://docs.mongodb.org/manual/faq/indexes/#using-ne-and-nin-in-a-query-is-slow-why)
-        if q_obj:
-            q_obj &= Q(is_deleted__in=[None, False])
-        else:
-            q_obj = Q(is_deleted__in=[None, False])
-        self._not_deleted_query_applied = True
+        extra_q_obj = Q(is_deleted=False)
+        q_obj = q_obj & extra_q_obj if q_obj else extra_q_obj
         return super(NotDeletedQuerySet, self).__call__(q_obj, class_check, slave_okay, read_preference, **query)
 
     def count(self, *args, **kwargs):
