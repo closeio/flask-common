@@ -102,24 +102,33 @@ class SoftDeleteTestCase(unittest.TestCase):
 
     def test_queryset_manager(self):
         a = self.Person.objects.create(name='Anthony')
+
+        # test all the ways to filter/aggregate counts
         self.assertEqual(len(self.Person.objects.all()), 1)
+        self.assertEqual(self.Person.objects.all().count(), 1)
+        self.assertEqual(self.Person.objects.filter(name='Anthony').count(), 1)
+        self.assertEqual(self.Person.objects.count(), 1)
+
         a.delete()
         self.assertEqual(len(self.Person.objects.all()), 0)
+        self.assertEqual(self.Person.objects.all().count(), 0)
+        self.assertEqual(self.Person.objects.filter(name='Anthony').count(), 0)
+        self.assertEqual(self.Person.objects.count(), 0)
 
-        self.assertEqual(len(self.Person.objects.filter(name__exact='Anthony')), 0)
+        self.assertEqual(len(self.Person.objects.filter(name='Anthony')), 0)
         a.is_deleted = False
         a.save()
-        self.assertEqual(len(self.Person.objects.filter(name__exact='Anthony')), 1)
+        self.assertEqual(len(self.Person.objects.filter(name='Anthony')), 1)
 
         b = self.Programmer.objects.create(name='Thomas', language='python.net')
         self.assertEqual(len(self.Programmer.objects.all()), 1)
         b.delete()
         self.assertEqual(len(self.Programmer.objects.all()), 0)
 
-        self.assertEqual(len(self.Programmer.objects.filter(name__exact='Thomas')), 0)
+        self.assertEqual(len(self.Programmer.objects.filter(name='Thomas')), 0)
         b.is_deleted = False
         b.save()
-        self.assertEqual(len(self.Programmer.objects.filter(name__exact='Thomas')), 1)
+        self.assertEqual(len(self.Programmer.objects.filter(name='Thomas')), 1)
 
 
 class FieldTestCase(unittest.TestCase):

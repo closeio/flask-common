@@ -76,14 +76,25 @@ class DocumentBase(Document):
 
 
 class NotDeletedQuerySet(QuerySet):
-    def __call__(self, q_obj=None, class_check=True, slave_okay=False, read_preference=None, include_deleted=False, **query):
-        if not include_deleted:
-            # we don't use __ne=True here, because $ne isn't a selective query and doesn't utilize an index in the most efficient manner (http://docs.mongodb.org/manual/faq/indexes/#using-ne-and-nin-in-a-query-is-slow-why)
-            if q_obj:
-                q_obj &= Q(is_deleted__in=[None, False])
-            else:
-                q_obj = Q(is_deleted__in=[None, False])
+    def __call__(self, q_obj=None, class_check=True, slave_okay=False, read_preference=None, **query):
+        # we don't use __ne=True here, because $ne isn't a selective query and doesn't utilize an index in the most efficient manner (http://docs.mongodb.org/manual/faq/indexes/#using-ne-and-nin-in-a-query-is-slow-why)
+        if q_obj:
+            q_obj &= Q(is_deleted__in=[None, False])
+        else:
+            q_obj = Q(is_deleted__in=[None, False])
+        self._not_deleted_query_applied = True
         return super(NotDeletedQuerySet, self).__call__(q_obj, class_check, slave_okay, read_preference, **query)
+
+    def in_bulk(self, *args, **kwargs):
+        # in_bulk ignores any filters that were applied to a queryset, hence we
+        # can't use it, because it doesn't respect 'is_deleted'
+        raise NotImplementedError('in_bulk does not work with soft-deletable querysets')
+
+    def count(self, *args, **kwargs):
+        # we need this hack for doc.objects.count() to exclude deleted objects
+        if not getattr(self, '_not_deleted_query_applied', False):
+            self = self.all()
+        return super(NotDeletedQuerySet, self).count(*args, **kwargs)
 
 class SoftDeleteDocument(Document):
     is_deleted = BooleanField(default=False)
@@ -92,7 +103,7 @@ class SoftDeleteDocument(Document):
         # delete only if already saved
         if self.pk:
             self.is_deleted = True
-            self.save(**kwargs)
+            self.update(set__is_deleted=self.is_deleted)
 
     @queryset_manager
     def all_objects(doc_cls, queryset):
