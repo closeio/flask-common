@@ -92,7 +92,12 @@ class NotDeletedQuerySet(QuerySet):
         return super(NotDeletedQuerySet, self).count(*args, **kwargs)
 
 class SoftDeleteDocument(Document):
-    is_deleted = BooleanField(default=False)
+    is_deleted = BooleanField(default=False, required=True)
+
+    def update(self, **kwargs):
+        if 'set__is_deleted' in kwargs and kwargs['set__is_deleted'] is None:
+            raise ValidationError('is_deleted cannot be set to None')
+        super(SoftDeleteDocument, self).update(**kwargs)
 
     def delete(self, **kwargs):
         # delete only if already saved

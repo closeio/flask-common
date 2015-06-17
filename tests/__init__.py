@@ -100,6 +100,15 @@ class SoftDeleteTestCase(unittest.TestCase):
         self.Person.drop_collection()
         self.Programmer.drop_collection()
 
+    def test_default_is_deleted(self):
+        """Make sure is_deleted is never null."""
+        s = self.Person.objects.create(name='Steve')
+        self.assertEqual(s.reload()._db_data['is_deleted'], False)
+
+        def _bad_update():
+            s.update(set__is_deleted=None)
+        self.assertRaises(ValidationError, _bad_update)
+
     def test_queryset_manager(self):
         a = self.Person.objects.create(name='Anthony')
 
