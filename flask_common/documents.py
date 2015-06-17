@@ -85,11 +85,6 @@ class NotDeletedQuerySet(QuerySet):
         self._not_deleted_query_applied = True
         return super(NotDeletedQuerySet, self).__call__(q_obj, class_check, slave_okay, read_preference, **query)
 
-    def in_bulk(self, *args, **kwargs):
-        # in_bulk ignores any filters that were applied to a queryset, hence we
-        # can't use it, because it doesn't respect 'is_deleted'
-        raise NotImplementedError('in_bulk does not work with soft-deletable querysets')
-
     def count(self, *args, **kwargs):
         # we need this hack for doc.objects.count() to exclude deleted objects
         if not getattr(self, '_not_deleted_query_applied', False):
