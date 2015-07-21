@@ -12,7 +12,7 @@ class StringIdField(StringField):
         return super(StringIdField, self).to_mongo(value)
 
 class RandomPKDocument(Document):
-    id = StringIdField(unique=True, primary_key=True)
+    id = StringIdField(primary_key=True)
 
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__, self.id)
