@@ -379,6 +379,7 @@ class LowerFieldTestCase(unittest.TestCase):
             field = LowerStringField(unique=True)
 
         Test.drop_collection()
+        Test.ensure_indexes()
 
         Test(field='whatever').save()
         self.assertRaises(db.NotUniqueError, Test(field='WHATEVER').save)
