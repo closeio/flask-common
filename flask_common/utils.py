@@ -650,7 +650,7 @@ class custom_query_counter(query_counter):
 
 
     def _get_queries(self):
-        ignore_query = {"ns": {"$nin": self.get_ignored_collections()}}
+        ignore_query = { "ns": {"$nin": self.get_ignored_collections()}, "op": { "$ne": "killcursors" } }
         return self.db.system.profile.find(ignore_query)
 
     def _get_count(self):
