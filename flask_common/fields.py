@@ -37,7 +37,16 @@ class LowerStringField(StringField):
         return super(LowerStringField, self).prepare_query_value(op, value and value.lower())
 
 
-class LowerEmailField(LowerStringField):
+class LowerEmailField(StringField):
+    def from_python(self, value):
+        return value and value.lower().strip()
+
+    def to_python(self, value):
+        return self.from_python(value)
+
+    def prepare_query_value(self, op, value):
+        return super(LowerEmailField, self).prepare_query_value(op, value and value.lower().strip())
+
     def validate(self, value):
         if not EmailField.EMAIL_REGEX.match(value):
             self.error('Invalid email address: %s' % value)
