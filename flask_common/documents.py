@@ -1,5 +1,6 @@
 import os
 import datetime
+from flask import current_app
 from zbase62 import zbase62
 from mongoengine import *
 from mongoengine.queryset import OperationError
@@ -305,7 +306,7 @@ class ForbiddenQueriesQuerySet(QuerySet):
     _marked_as_safe = False
 
     def _check_for_forbidden_queries(self):
-        if self._marked_as_safe:
+        if self._marked_as_safe or current_app.testing:
             return
 
         query_shape = self._get_query_shape(self._query)
