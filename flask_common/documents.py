@@ -314,7 +314,7 @@ class ForbiddenQueriesQuerySet(QuerySet):
             if (
                 query_shape == forbidden['query_shape'] and
                 (not forbidden.get('orderings') or self._ordering in forbidden['orderings']) and
-                not self._limit or self._limit > forbidden.get('max_allowed_limit', 0)
+                (not self._limit or self._limit > forbidden.get('max_allowed_limit', 0))
             ):
                 raise ForbiddenQueryException(
                     'Forbidden query used! Query: %s, Ordering: %s, Limit: %s' % (
