@@ -305,7 +305,8 @@ class ForbiddenQueriesQuerySet(QuerySet):
 
     _marked_as_safe = False
 
-    def _check_for_forbidden_queries(self):
+    def _check_for_forbidden_queries(self, idx_key=None):
+        # idx_key can be a slice or an int from Doc.objects[idx_key]
         is_testing = False
         try:
             is_testing = current_app.testing
@@ -319,21 +320,30 @@ class ForbiddenQueriesQuerySet(QuerySet):
         for forbidden in self.forbidden_queries:
             if (
                 query_shape == forbidden['query_shape'] and
-                (not forbidden.get('orderings') or self._ordering in forbidden['orderings']) and
-                (not self._limit or self._limit > forbidden.get('max_allowed_limit', 0))
+                (not forbidden.get('orderings') or self._ordering in forbidden['orderings'])
             ):
-                raise ForbiddenQueryException(
-                    'Forbidden query used! Query: %s, Ordering: %s, Limit: %s' % (
-                        self._query, self._ordering, self._limit
+
+                # determine the real limit based on objects.limit or objects[idx_key]
+                limit = self._limit
+                if limit is None and idx_key is not None:
+                    if isinstance(idx_key, slice):
+                        limit = idx_key.stop
+                    else:
+                        limit = idx_key
+
+                if limit is None or limit > forbidden.get('max_allowed_limit', 0):
+                    raise ForbiddenQueryException(
+                        'Forbidden query used! Query: %s, Ordering: %s, Limit: %s' % (
+                            self._query, self._ordering, limit
+                        )
                     )
-                )
 
     def next(self):
         self._check_for_forbidden_queries()
         return super(ForbiddenQueriesQuerySet, self).next()
 
     def __getitem__(self, key):
-        self._check_for_forbidden_queries()
+        self._check_for_forbidden_queries(key)
         return super(ForbiddenQueriesQuerySet, self).__getitem__(key)
 
     def mark_as_safe(self):
