@@ -16,7 +16,7 @@ from wtforms import Form
 from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.crypto import aes_generate_key
 from flask_common.documents import fetch_related
-from flask_common.utils import apply_recursively, isortedset, slugify, custom_query_counter
+from flask_common.utils import apply_recursively, isortedset, slugify, custom_query_counter, uniqify
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, \
                                 EncryptedStringField, LowerStringField, LowerEmailField
 from flask_common.formfields import BetterDateTimeField
@@ -492,6 +492,18 @@ class FetchRelatedTestCase(unittest.TestCase):
 
             # one query for B, one for C, one for A
             self.assertEqual(q, 3)
+
+class UtilsTestCase(unittest.TestCase):
+
+    def test_uniqify(self):
+        self.assertEqual(
+            uniqify([1, 2, 3, 1, 'a', None, 'a', 'b']),
+            [1, 2, 3, 'a', None, 'b']
+        )
+        self.assertEqual(
+            uniqify([ { 'a': 1 }, { 'a': 2 }, { 'a': 1 } ]),
+            [ { 'a': 1 }, { 'a': 2 } ]
+        )
 
 
 if __name__ == '__main__':

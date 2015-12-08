@@ -541,9 +541,26 @@ class ThreadedTimer(object):
 
 
 def uniqify(seq):
-    # preserves order
+    """
+    Given an iterable, return a list of its unique elements, preserving the
+    original order. For example:
+
+    >>> uniqify([1, 2, 3, 1, 'a', None, 'a', 'b'])
+    [1, 2, 3, 'a', None, 'b']
+
+    >>> uniqify([ { 'a': 1 }, { 'a': 2 }, { 'a': 1 } ])
+    [ { 'a': 1 }, { 'a': 2 } ]
+
+    Note: This function doesn't work with nested dicts.
+    """
     seen = set()
-    return [ x for x in seq if x not in seen and not seen.add(x)]
+    result = []
+    for x in seq:
+        key = hash(frozenset(x.items())) if isinstance(x, dict) else x
+        if key not in seen:
+            seen.add(key)
+            result.append(x)
+    return result
 
 
 ### NORMALIZATION UTILS ###
