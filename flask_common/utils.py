@@ -23,6 +23,7 @@ from flask import current_app, request, Response
 from flask.ext.mail import Message
 from functools import wraps
 from logging.handlers import SMTPHandler
+from mongoengine import EmbeddedDocument
 from mongoengine.context_managers import query_counter
 from smtplib import SMTPDataError
 from socket import gethostname
@@ -556,7 +557,12 @@ def uniqify(seq):
     seen = set()
     result = []
     for x in seq:
-        key = hash(frozenset(x.items())) if isinstance(x, dict) else x
+        key = x
+        if isinstance(key, EmbeddedDocument):
+            key = key.to_dict()
+        if isinstance(key, dict):
+            key = hash(frozenset(key.items()))
+
         if key not in seen:
             seen.add(key)
             result.append(x)
