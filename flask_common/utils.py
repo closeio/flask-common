@@ -5,6 +5,7 @@ import cStringIO
 import datetime
 import dateutil.parser
 import itertools
+import math
 import pytz
 import re
 import signal
@@ -180,6 +181,13 @@ def smart_unicode(s, encoding='utf-8', errors='strict'):
     elif not isinstance(s, unicode):
         s = s.decode(encoding, errors)
     return s
+
+def finite_float(value):
+    """Convert any value to a finite float or throw a ValueError if it can't be done."""
+    value = float(value)
+    if math.isnan(value) or math.isinf(value):
+        raise ValueError("Can't convert %s to a finite float" % value)
+    return value
 
 
 class Enum(object):
