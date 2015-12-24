@@ -1,5 +1,3 @@
-# From: http://techspot.zzzeek.org/2011/01/14/the-enum-recipe/
-
 from sqlalchemy.types import SchemaType, TypeDecorator, Enum
 import re
 
@@ -65,7 +63,32 @@ class EnumMeta(type):
         return iter(cls._reg.values())
 
 class DeclEnum(object):
-    """Declarative enumeration."""
+    """
+    Declarative enumeration.
+    ---
+    For information on internals, see: http://techspot.zzzeek.org/2011/01/14/the-enum-recipe/
+
+    Usage:
+
+        from flask_common.declenum import DeclEnum
+
+        class Colors(DeclEnum):
+            blue = 'blue', 'Blue color'
+            red = 'red', 'Red color'
+
+
+        color = Colors.red
+        color == Colors.red
+        color.value == 'red'
+        color == Colors.from_string('red')
+        Colors.red.description == 'Red Color'
+        Colors.red.value = 'red'
+
+    Usage in SQLAlchemy:
+        color = sql.Column(Colors.db_type(), default=Colors.red)
+
+
+    """
 
     __metaclass__ = EnumMeta
     _reg = {}
