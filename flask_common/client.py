@@ -24,27 +24,38 @@ class ApiClient(Client):
         if 'headers' not in kwargs:
             kwargs['headers'] = self.get_headers(api_key)
         resp = super(ApiClient, self).open(*args, **kwargs)
+
         try:
             resp.json = lambda: json.loads(resp.data)
         except ValueError:
             pass
         return resp
 
-def local_request(view, args=None, user=None, view_args=None, api_key=None):
+def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
+    if api_key is not None and user is not None:
+        raise TypeError("local_request can only take an api_key or a user, not both.")
+
     if not view_args:
         view_args = {}
+
     ctx = current_app.test_request_context()
-    ctx.request.args = args
+    ctx.request.environ['REQUEST_METHOD'] = method
     ctx.user = user
-    ctx.g.api_key = api_key
+    if api_key is not None:
+        ctx.g.api_key = api_key
+    if method == 'GET':
+        ctx.request.args = data
+    else:
+        ctx.request.data = json.dumps(data)
     ctx.push()
+
     try:
-        data = view.dispatch_request(**view_args).data
-        json_data = json.loads(data)
+        resp = view.dispatch_request(**view_args)
+        json_data = json.loads(resp.data)
     except Exception as e:
         ctx.pop()
         raise e
     else:
         ctx.pop()
 
-    return json_data
+    return resp.status_code, json_data
