@@ -43,9 +43,9 @@ def local_request(view, method='GET', data=None, view_args=None, user=None, api_
     ctx.user = user
     if api_key is not None:
         ctx.g.api_key = api_key
-    if method == 'GET':
+    if data and method == 'GET':
         ctx.request.args = data
-    else:
+    elif data:
         ctx.request.data = json.dumps(data)
     ctx.push()
 
