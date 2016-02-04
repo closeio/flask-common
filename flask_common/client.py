@@ -54,7 +54,7 @@ def local_request(view, method='GET', data=None, view_args=None, user=None, api_
         view_args = {}
 
     ctx = current_app.test_request_context()
-    ctx.request.environ['REQUEST_METHOD'] = method
+    ctx.request.environ['REQUEST_METHOD'] = method  # we can't directly manipulate request.method (it's immutable)
     ctx.user = user
     if api_key is not None:
         ctx.g.api_key = api_key
