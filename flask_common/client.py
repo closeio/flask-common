@@ -32,6 +32,21 @@ class ApiClient(Client):
         return resp
 
 def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
+    """
+    Perform a request to the current application's view without the network
+    overhead and return a tuple (response_status_code, response_json_data).
+    Examples:
+
+    # List leads for a given organization (as seen by user A)
+    local_request(LeadView(), data={ 'organization_id': 'orga_abc' }, user=user_A)
+
+    # Post a note as user B
+    local_request(NoteView(), method='POST', data={ 'organization_id': 'orga_abc', 'note': 'hello' }, user=user_B)
+
+    # Update an opportunity as a user associated with an API key "abc"
+    local_request(OpportunityView(), method='PUT', data={ 'status': 'won' },
+                  view_args={ 'pk': 'oppo_abcd' }, api_key='abc')
+    """
     if api_key is not None and user is not None:
         raise TypeError("local_request can only take an api_key or a user, not both.")
 
