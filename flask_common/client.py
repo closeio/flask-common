@@ -24,27 +24,53 @@ class ApiClient(Client):
         if 'headers' not in kwargs:
             kwargs['headers'] = self.get_headers(api_key)
         resp = super(ApiClient, self).open(*args, **kwargs)
+
         try:
             resp.json = lambda: json.loads(resp.data)
         except ValueError:
             pass
         return resp
 
-def local_request(view, args=None, user=None, view_args=None, api_key=None):
+def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
+    """
+    Perform a request to the current application's view without the network
+    overhead and return a tuple (response_status_code, response_json_data).
+    Examples:
+
+    # List leads for a given organization (as seen by user A)
+    local_request(LeadView(), data={ 'organization_id': 'orga_abc' }, user=user_A)
+
+    # Post a note as user B
+    local_request(NoteView(), method='POST', data={ 'organization_id': 'orga_abc', 'note': 'hello' }, user=user_B)
+
+    # Update an opportunity as a user associated with an API key "abc"
+    local_request(OpportunityView(), method='PUT', data={ 'status': 'won' },
+                  view_args={ 'pk': 'oppo_abcd' }, api_key='abc')
+    """
+    if api_key is not None and user is not None:
+        raise TypeError("local_request can only take an api_key or a user, not both.")
+
     if not view_args:
         view_args = {}
+
     ctx = current_app.test_request_context()
-    ctx.request.args = args
+    ctx.request.environ['REQUEST_METHOD'] = method  # we can't directly manipulate request.method (it's immutable)
     ctx.user = user
-    ctx.g.api_key = api_key
+    if api_key is not None:
+        ctx.g.api_key = api_key
+    if data and method == 'GET':
+        ctx.request.args = data
+    elif data:
+        ctx.request.data = json.dumps(data)
     ctx.push()
+
     try:
-        data = view.dispatch_request(**view_args).data
-        json_data = json.loads(data)
+        resp = view.dispatch_request(**view_args)
+        json_data = json.loads(resp.data)
     except Exception as e:
         ctx.pop()
         raise e
     else:
         ctx.pop()
 
-    return json_data
+    return resp.status_code, json_data
