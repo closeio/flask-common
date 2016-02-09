@@ -23,5 +23,6 @@ class FreezeTimeMixin():
         if self.frozen:
             self.now = None
             self.freezer.stop()
+            self.frozen = False
 
 
