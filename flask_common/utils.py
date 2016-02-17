@@ -327,6 +327,33 @@ def mail_admins(subject, body, recipients=None):
                 body=body,
             ))
 
+def format_locals(exc_info):
+    tb = exc_info[2]
+    stack = []
+
+    message = ''
+
+    while tb:
+        stack.append(tb.tb_frame)
+        tb = tb.tb_next
+
+    message += 'Locals by frame, innermost last:\n'
+
+    for frame in stack:
+        message += '\nFrame %s in %s at line %s\n' % (frame.f_code.co_name,
+                                                      frame.f_code.co_filename,
+                                                      frame.f_lineno)
+        for key, value in frame.f_locals.items():
+            message += "\t%16s = " % key
+            # We have to be careful not to cause a new error in our error
+            # printer! Calling repr() on an unknown object could cause an error
+            # we don't want.
+            try:
+                message += '%s\n' % repr(value)
+            except:
+                message += "<ERROR WHILE PRINTING VALUE>\n"
+
+    return message
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
     exc_info = sys.exc_info()
@@ -345,33 +372,9 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
             message_context += 'Error reporting context.'
         message_context += '\n\n\n\n'
 
-
     if vars:
-        tb = exc_info[2]
-        stack = []
-
-        while tb:
-            stack.append(tb.tb_frame)
-            tb = tb.tb_next
-
-        message_vars += "Locals by frame, innermost last:\n"
-
-        for frame in stack:
-            message_vars += "\nFrame %s in %s at line %s\n" % (frame.f_code.co_name,
-                                                 frame.f_code.co_filename,
-                                                 frame.f_lineno)
-            for key, value in frame.f_locals.items():
-                message_vars += "\t%16s = " % key
-                # We have to be careful not to cause a new error in our error
-                # printer! Calling repr() on an unknown object could cause an
-                # error we don't want.
-                try:
-                    message_vars += '%s\n' % repr(value)
-                except:
-                    message_vars += "<ERROR WHILE PRINTING VALUE>\n"
-
+        message_vars += format_locals(exc_info)
         message_vars += '\n\n\n'
-
 
     message_tb = '\n'.join(traceback.format_exception(*exc_info))
 
