@@ -353,7 +353,7 @@ def format_locals(exc_info):
             except:
                 message += "<ERROR WHILE PRINTING VALUE>\n"
 
-    return message
+    return force_unicode(message)
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
     exc_info = sys.exc_info()
