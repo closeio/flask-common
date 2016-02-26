@@ -252,7 +252,7 @@ def fetch_related(objs, field_dict, cache_map=None):
         if rel_obj_map:
             # Go recursive
             if isinstance(sub_field_dict, dict):
-                fetch_related(rel_obj_map.values(), sub_field_dict)
+                fetch_related(rel_obj_map.values(), sub_field_dict, cache_map=cache_map)
 
             for obj in objs:
                 if isinstance(field, SafeReferenceField):

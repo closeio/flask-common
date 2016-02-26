@@ -448,13 +448,19 @@ class FetchRelatedTestCase(unittest.TestCase):
         class C(db.Document):
             ref_a = ReferenceField(A)
 
+        class D(db.Document):
+            ref_c = ReferenceField(C)
+            ref_a = ReferenceField(A)
+
         A.drop_collection()
         B.drop_collection()
         C.drop_collection()
+        D.drop_collection()
 
         self.A = A
         self.B = B
         self.C = C
+        self.D = D
 
         self.a1 = A.objects.create(txt='a1')
         self.a2 = A.objects.create(txt='a2')
@@ -462,6 +468,7 @@ class FetchRelatedTestCase(unittest.TestCase):
         self.b1 = B.objects.create(ref=self.a1)
         self.b2 = B.objects.create(ref=self.a2)
         self.c1 = C.objects.create(ref_a=self.a3)
+        self.d1 = D.objects.create(ref_c=self.c1, ref_a=self.a3)
 
     def test_fetch_related(self):
         with custom_query_counter() as q:
@@ -472,7 +479,7 @@ class FetchRelatedTestCase(unittest.TestCase):
 
             # make sure A objs are fetched
             for obj in objs:
-                obj.ref.txt == 'whatever'
+                self.assertTrue(obj.ref.txt in ('a1', 'a2'))
 
             # one query for B, one query for A
             self.assertEqual(q, 2)
@@ -488,12 +495,35 @@ class FetchRelatedTestCase(unittest.TestCase):
             # make sure A objs are fetched
             for obj in objs:
                 if isinstance(obj, self.B):
-                    obj.ref.txt == 'whatever'
+                    self.assertTrue(obj.ref.txt in ('a1', 'a2'))
                 else:
-                    obj.ref_a.txt == 'whatever'
+                    self.assertEqual(obj.ref_a.txt, 'a3')
 
             # one query for B, one for C, one for A
             self.assertEqual(q, 3)
+
+    def test_fetch_related_subdict(self):
+        """
+        Make sure fetching related references works with subfields and that
+        it uses caching properly.
+        """
+        with custom_query_counter() as q:
+            objs = list(self.D.objects.all())
+            fetch_related(objs, {
+                'ref_a': True,
+                'ref_c': {
+                    'ref_a': True
+                }
+            })
+
+            # make sure A objs are fetched
+            for obj in objs:
+                self.assertEqual(obj.ref_a.txt, 'a3')
+                self.assertEqual(obj.ref_c.ref_a.txt, 'a3')
+
+            # one query for D, one query for C, one query for A
+            self.assertEqual(q, 3)
+
 
 class UtilsTestCase(unittest.TestCase):
 
