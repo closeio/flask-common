@@ -506,6 +506,10 @@ class UtilsTestCase(unittest.TestCase):
             uniqify([ { 'a': 1 }, { 'a': 2 }, { 'a': 1 } ]),
             [ { 'a': 1 }, { 'a': 2 } ]
         )
+        self.assertEqual(
+            uniqify([ { 'a': 1, 'b': 3 }, { 'a': 2, 'b': 2 }, { 'a': 1, 'b': 1 } ], key=lambda i: i['a']),
+            [ { 'a': 1, 'b': 3 }, { 'a': 2, 'b': 2 } ]
+        )
 
 class DeclEnumTestCase(unittest.TestCase):
     def test_enum(self):
