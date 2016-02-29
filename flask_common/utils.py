@@ -579,7 +579,7 @@ class ThreadedTimer(object):
         self.interval = delta.days * 86400 + delta.seconds + delta.microseconds / 1000000.
 
 
-def uniqify(seq, key_comparator=lambda key: key):
+def uniqify(seq, key=lambda i: i):
     """
     Given an iterable, return a list of its unique elements, preserving the
     original order. For example:
@@ -589,20 +589,27 @@ def uniqify(seq, key_comparator=lambda key: key):
 
     >>> uniqify([ { 'a': 1 }, { 'a': 2 }, { 'a': 1 } ])
     [ { 'a': 1 }, { 'a': 2 } ]
+    
+    You can optionally specify a callable as the 'key' parameter which
+    can extract or otherwise obtain a key from the items to use as the test for uniqueness.
+
+    For example:
+    >>> uniqify([dict(foo='bar', baz='qux'), dict(foo='grill', baz='qux')], key=lambda item: item['baz'])
+    [ { 'foo':  'bar', 'baz': 'qux' } ]
 
     Note: This function doesn't work with nested dicts.
     """
     seen = set()
     result = []
     for x in seq:
-        key = key_comparator(x)
-        if isinstance(key, EmbeddedDocument):
-            key = key.to_dict()
-        if isinstance(key, dict):
-            key = hash(frozenset(key.items()))
+        unique_key = key(x)
+        if isinstance(unique_key, EmbeddedDocument):
+            unique_key = unique_key.to_dict()
+        if isinstance(unique_key, dict):
+            unique_key = hash(frozenset(unique_key.items()))
 
-        if key not in seen:
-            seen.add(key)
+        if unique_key not in seen:
+            seen.add(unique_key)
             result.append(x)
     return result
 
