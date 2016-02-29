@@ -579,7 +579,7 @@ class ThreadedTimer(object):
         self.interval = delta.days * 86400 + delta.seconds + delta.microseconds / 1000000.
 
 
-def uniqify(seq):
+def uniqify(seq, key_comparator=lambda key: key):
     """
     Given an iterable, return a list of its unique elements, preserving the
     original order. For example:
@@ -595,7 +595,7 @@ def uniqify(seq):
     seen = set()
     result = []
     for x in seq:
-        key = x
+        key = key_comparator(x)
         if isinstance(key, EmbeddedDocument):
             key = key.to_dict()
         if isinstance(key, dict):
