@@ -9,6 +9,7 @@ import unittest
 from dateutil.tz import tzutc
 from flask import Flask
 from mongoengine import connection, Document
+from mongoengine.errors import DoesNotExist
 from mongoengine.fields import ReferenceField, SafeReferenceListField, StringField
 from werkzeug.datastructures import MultiDict
 from wtforms import Form
@@ -523,6 +524,23 @@ class FetchRelatedTestCase(unittest.TestCase):
 
             # one query for D, one query for C, one query for A
             self.assertEqual(q, 3)
+
+    def test_fetch_related_subdict_broken_reference(self):
+        """
+        Make sure that fetching sub-references of a broken reference works.
+        """
+
+        # delete the object referenced by self.d1.ref_c
+        self.c1.delete()
+
+        objs = list(self.D.objects.all())
+        fetch_related(objs, {
+            'ref_c': {
+                'ref_a': True
+            }
+        })
+        self.assertTrue(objs[0].ref_c.pk)  # pk still exists even though the reference is broken
+        self.assertRaises(DoesNotExist, lambda: objs[0].ref_c.ref_a)
 
 
 class UtilsTestCase(unittest.TestCase):

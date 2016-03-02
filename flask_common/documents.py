@@ -185,7 +185,7 @@ def fetch_related(objs, field_dict, cache_map=None):
     instances = get_instance_for_each_type(objs)
     for field_name, sub_field_dict in field_dict.iteritems():
 
-        instance = [instance for instance in instances if field_name in instance.__class__._fields]
+        instance = [instance for instance in instances if instance and field_name in instance.__class__._fields]
         if not instance:
             continue  # None of the objects contains this field
 
