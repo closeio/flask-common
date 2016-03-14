@@ -2,21 +2,55 @@ from sqlalchemy.types import SchemaType, TypeDecorator, Enum
 import re
 
 class DeclEnumType(SchemaType, TypeDecorator):
-    def __init__(self, enum):
+    """
+    DeclEnumType supports object instantiation in two different ways:
+
+    Passing in an enum:
+    This is to be used in the application code. It will pull enum values straight from
+    the DeclEnum object. A helper for this is available in DeclEnum.db_type()
+
+    Passing in a tuple with enum values:
+    In migrations the enum value list needs to be fix. It should not be pulled in from
+    the application code, otherwise later modifications of enum values could result in
+    those values being added in an earlier migration when re-running migrations from the
+    beginning. Therefore DeclEnum(enum_values=('one', 'two'), enum_name='MyEnum') should
+    be used.
+
+    """
+
+    def __init__(self, enum=None, enum_values=None, enum_name=None):
         self.enum = enum
+        self.enum_values = enum_values
+        self.enum_name = enum_name
+
+        if enum:
+            self.enum_values=enum.values()
+            self.enum_name=enum.__name__
+
         self.impl = Enum(
-                        *enum.values(),
+                        *self.enum_values,
                         name="ck%s" % re.sub(
                                     '([A-Z])',
-                                    lambda m:"_" + m.group(1).lower(),
-                                    enum.__name__)
+                                    lambda m: "_" + m.group(1).lower(),
+                                    self.enum_name)
                     )
+
+    def create(self, bind=None, checkfirst=False):
+        """Issue CREATE ddl for this type, if applicable."""
+        super(DeclEnumType, self).create(bind, checkfirst)
+        t = self.dialect_impl(bind.dialect)
+        if t.impl.__class__ is not self.__class__ and isinstance(t, SchemaType):
+            t.impl.create(bind=bind, checkfirst=checkfirst)
 
     def _set_table(self, table, column):
         self.impl._set_table(table, column)
 
     def copy(self):
-        return DeclEnumType(self.enum)
+        if self.enum:
+            return DeclEnumType(self.enum)
+        else:
+            return DeclEnumType(enum_name=self.enum_name, enum_values=self.enum_values)
+
 
     def process_bind_param(self, value, dialect):
         if value is None:
@@ -110,3 +144,4 @@ class DeclEnum(object):
     @classmethod
     def db_type(cls):
         return DeclEnumType(cls)
+
