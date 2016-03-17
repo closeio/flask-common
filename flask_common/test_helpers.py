@@ -1,5 +1,42 @@
 from freezegun import freeze_time
 
+# Inspired by http://stackoverflow.com/a/13875412
+class ContextMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(ContextMixin, self).__init__(*args, **kwargs)
+
+        # List of open contexts
+        self._ctxs = []
+
+        # In case setup fails, we still want to tear down any open contexts
+        self.addCleanup(self.teardown_context)
+
+    def setUp(self):
+        super(ContextMixin, self).setUp()
+        self.setup_context()
+
+    def tearDown(self):
+        self.teardown_context()
+        super(ContextMixin, self).tearDown()
+
+    def setup_context(self):
+        ctxs = []
+        for cls in reversed(self.__class__.mro()):
+            context_method = cls.__dict__.get('context')
+            if context_method:
+                ctxs.append(context_method(self))
+        for ctx in ctxs:
+            next(ctx)
+            self._ctxs.append(ctx)
+
+    def teardown_context(self):
+        for ctx in reversed(self._ctxs):
+            # Safe to run multiple times -- we will only execute the code after
+            # the context's yield statement once.
+            for _ in ctx:
+                raise RuntimeError('{}.context() must not yield more than once'.format(cls.__name__))
+
+
 class FreezeTimeMixin():
     """
     Helper to use freeze_gun for unit tests.
