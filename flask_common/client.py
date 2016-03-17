@@ -5,12 +5,34 @@ from werkzeug.datastructures import Headers
 from werkzeug.test import Client as werkzeug_test_client
 
 class Client(werkzeug_test_client):
-    pass
+    """
+    Test client that supports JSON and uses the application's response class.
+    """
+    def __init__(self, app, **kwargs):
+        if not 'response_wrapper' in kwargs:
+            kwargs['response_wrapper'] = app.response_class
+        return super(Client, self).__init__(app, **kwargs)
+
+    def open(self, *args, **kwargs):
+        if 'json' in kwargs and 'data' not in kwargs:
+            kwargs['data'] = json.dumps(kwargs.pop('json'))
+
+        resp = super(Client, self).open(*args, **kwargs)
+
+        try:
+            resp.json = lambda: json.loads(resp.data)
+        except ValueError:
+            pass
+
+        return resp
 
 class ApiClient(Client):
-    def __init__(self, app, *args, **kwargs):
-        self.api_key = kwargs.pop('api_key', None)
-        return super(ApiClient, self).__init__(app, app.response_class, use_cookies=False)
+    """
+    API test client that supports JSON and uses the given API key.
+    """
+    def __init__(self, app, api_key=None):
+        self.api_key = api_key
+        return super(ApiClient, self).__init__(app, use_cookies=False)
 
     def get_headers(self, api_key):
         api_key = api_key or self.api_key
@@ -19,17 +41,9 @@ class ApiClient(Client):
     def open(self, *args, **kwargs):
         # include api_key auth header in all api calls
         api_key = kwargs.pop('api_key', self.api_key)
-        if 'json' in kwargs and 'data' not in kwargs:
-            kwargs['data'] = json.dumps(kwargs.pop('json'))
         if 'headers' not in kwargs:
             kwargs['headers'] = self.get_headers(api_key)
-        resp = super(ApiClient, self).open(*args, **kwargs)
-
-        try:
-            resp.json = lambda: json.loads(resp.data)
-        except ValueError:
-            pass
-        return resp
+        return super(ApiClient, self).open(*args, **kwargs)
 
 def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
     """
