@@ -8,10 +8,10 @@ class Client(werkzeug_test_client):
     """
     Test client that supports JSON and uses the application's response class.
     """
-    def __init__(self, app, **kwargs):
-        if not 'response_wrapper' in kwargs:
-            kwargs['response_wrapper'] = app.response_class
-        return super(Client, self).__init__(app, **kwargs)
+    def __init__(self, app, response_wrapper=None, **kwargs):
+        if not response_wrapper:
+            response_wrapper = app.response_class
+        return super(Client, self).__init__(app, response_wrapper, **kwargs)
 
     def open(self, *args, **kwargs):
         if 'json' in kwargs and 'data' not in kwargs:
