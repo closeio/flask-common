@@ -542,6 +542,34 @@ class FetchRelatedTestCase(unittest.TestCase):
         self.assertTrue(objs[0].ref_c.pk)  # pk still exists even though the reference is broken
         self.assertRaises(DoesNotExist, lambda: objs[0].ref_c.ref_a)
 
+    def test_fetch_related_certain_fields(self):
+        """
+        Make sure we can only fetch particular fields of a reference.
+        """
+        objs = list(self.B.objects.all())
+        fetch_related(objs, {
+            'ref': ["id"]
+        })
+        self.assertEqual(objs[0].ref.pk, self.a1.pk)
+
+        # "txt" field of the referenced object shouldn't be fetched
+        self.assertEqual(objs[0].ref.txt, None)
+        self.assertTrue(self.a1.txt)
+
+        # TODO query counter
+
+    def test_fetch_certain_fields_limitation(self):
+        """
+        Fetching certain fields via fetch_related has a limitation that
+        different fields cannot be fetched for the same document types.
+        Make sure that's contraint is respected.
+        """
+        objs = list(self.B.objects.all()) + list(self.C.objects.all())
+        self.assertRaises(RuntimeError, fetch_related, objs, {
+            'ref': ["id"],
+            'ref_a': True
+        })
+
 
 class UtilsTestCase(unittest.TestCase):
 

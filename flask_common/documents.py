@@ -125,22 +125,29 @@ def fetch_related(objs, field_dict, cache_map=None):
         'lead': {
             'created_by': True,
             'updated_by': True,
-        }
+        },
+        'contact': ['id'],
     })
 
     In this sample, users and leads for all objs will be fetched and attached.
-    Then, created_by and updated_by users are fetched in one query and attached.
+    Then, lead.created_by and lead.updated_by users are fetched in one query
+    and attached. Finally, a contact will be pulled in, only fetching the ID
+    from the database.
 
     Note that the function doesn't merge queries for the same document class
     across multiple (recursive) function calls, but it never fetches the same
     related object twice.
+
+    Be *very* cautious when pulling in only specific fields for a reference.
+    Accessing fields that haven't been pulled will falsely show None even if
+    a value for that field exists in the database.
 
     If you need to call fetch_related multiple times, it's worth passing a
     cache_map (initially it can be an empty dictionary). It will be extended
     during each call to include all the objects fetched up until the current
     call. This way we ensure that the same objects aren't fetched more than
     once across multiple fetch_related calls. Cache map has a form of:
-    { DocumentClass: [list, of, objects, fetched, for, a, given, class] }.
+    { DocumentClass: { id_of_fetched_obj: obj, id_of_fetched_obj2: obj2 } }.
     """
 
     if not objs:
@@ -153,7 +160,7 @@ def fetch_related(objs, field_dict, cache_map=None):
     # ids of objects that will be fetched in this iteration, by document class
     id_set_map = {}
 
-    # Helper mapping: field_name -> field, db_field, document_class
+    # Helper mapping: field_name -> field, db_field, document_class, fields_to_fetch
     field_cache = {}
 
     def id_from_value(field, val):
@@ -182,6 +189,7 @@ def fetch_related(objs, field_dict, cache_map=None):
         if not changed and key in obj._changed_fields:
             obj._changed_fields.remove(key)
 
+    # Populate the field_cache
     instances = get_instance_for_each_type(objs)
     for field_name, sub_field_dict in field_dict.iteritems():
 
@@ -198,11 +206,12 @@ def fetch_related(objs, field_dict, cache_map=None):
             document_class = field.field.document_type
         else:
             raise NotImplementedError('%s class not supported for fetch_related' % field.__class__.__name__)
-        field_cache[field_name] = (field, db_field, document_class)
+        fields_to_fetch = sub_field_dict if isinstance(sub_field_dict, list) else None
+        field_cache[field_name] = (field, db_field, document_class, fields_to_fetch)
 
     # Determine what IDs we want to fetch
     for field_name, sub_field_dict in field_dict.iteritems():
-        field, db_field, document_class = field_cache.get(field_name) or (None, None, None)
+        field, db_field, document_class, fields_to_fetch = field_cache.get(field_name) or (None, None, None, None)
         if not field:
             continue
 
@@ -221,29 +230,45 @@ def fetch_related(objs, field_dict, cache_map=None):
                 rel_obj_map = cache_map[document_class]
 
             if not document_class in id_set_map:
-                id_set = id_set_map[document_class] = set()
+                id_set_map[document_class] = {
+                    'ids': set(),
+                    'fields_to_fetch': fields_to_fetch
+                }
+                id_set = id_set_map[document_class]['ids']
             else:
-                id_set = id_set_map[document_class]
+                id_set = id_set_map[document_class]['ids']
+
+                # make sure we don't allow fetching the same document classes with different
+                # fields (e.g. { user: ["id"], created_by: True, updated_by: ["id", "email"] })
+                if fields_to_fetch != id_set_map[document_class]['fields_to_fetch']:
+                    raise RuntimeError('Cannot specify different fields_to_fetch for the same document class %s' % document_class)
 
             # Never fetch already fetched objects
             id_set.update(set(refs) - set(rel_obj_map.keys()))
 
     # Fetch objects
-    for document_class, id_set in id_set_map.iteritems():
+    for document_class, fetch_info in id_set_map.iteritems():
         rel_obj_map = cache_map[document_class]
 
+        id_set = fetch_info['ids']
         if id_set:
-            id_set = list(id_set)
-            if len(id_set) == 1:
-                rel_obj_map.update({ id_set[0]: document_class.objects.filter(pk=id_set[0]).first() })
-            else:
-                rel_obj_map.update(
-                    document_class.objects.in_bulk(id_set)
-                )
+            qs = document_class.objects.filter(pk__in=id_set)
+
+            # only fetch the requested fields
+            if fetch_info['fields_to_fetch']:
+                qs = qs.only(*fetch_info['fields_to_fetch'])
+
+            # since IDs are unique, we can set a limit equal to the length
+            # of the ids list (helps with performance)
+            qs = qs.limit(len(id_set))
+
+            rel_obj_map.update({
+                obj.pk: obj for obj in qs
+            })
 
     # Assign objects
     for field_name, sub_field_dict in field_dict.iteritems():
-        field, db_field, document_class = field_cache.get(field_name) or (None, None, None)
+        field, db_field, document_class, fields_to_fetch = field_cache.get(field_name) or (None, None, None, None)
 
         if not field:
             continue
