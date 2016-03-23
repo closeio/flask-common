@@ -295,7 +295,7 @@ def fetch_related(objs, field_dict, cache_map=None):
             continue
 
         # merge the permanent and temporary caches for the ease of assignment
-        pk_to_obj = cache_map.get(document_class).copy()
+        pk_to_obj = cache_map.get(document_class, {}).copy()
         pk_to_obj.update(partial_cache_map.get(document_class, {}))
         if pk_to_obj:
 

@@ -458,17 +458,22 @@ class FetchRelatedTestCase(unittest.TestCase):
             refs_a = SafeReferenceListField(ReferenceField(A))
             ref_b = SafeReferenceField(B)
 
+        class F(db.Document):
+            ref_a = ReferenceField(A)
+
         A.drop_collection()
         B.drop_collection()
         C.drop_collection()
         D.drop_collection()
         E.drop_collection()
+        F.drop_collection()
 
         self.A = A
         self.B = B
         self.C = C
         self.D = D
         self.E = E
+        self.F = F
 
         self.a1 = A.objects.create(txt='a1')
         self.a2 = A.objects.create(txt='a2')
@@ -481,6 +486,7 @@ class FetchRelatedTestCase(unittest.TestCase):
             refs_a=[self.a1, self.a2, self.a3],
             ref_b=self.b1
         )
+        self.f1 = F.objects.create(ref_a=None)  # empty ref
 
     def test_fetch_related(self):
         with custom_query_counter() as q:
@@ -638,6 +644,25 @@ class FetchRelatedTestCase(unittest.TestCase):
             set([ tuple(q['execStats']['transformBy'].keys()) for q in queries ]),
             set([ ('_id',) ]),
         )
+
+    def test_fetch_field_without_refs(self):
+        """
+        Make sure calling fetch_related on a field that doesn't hold any
+        references works.
+        """
+        # full fetch
+        objs = list(self.F.objects.all())
+        fetch_related(objs, {
+            'ref_a': True
+        })
+        self.assertEqual(objs[0].ref_a, None)
+
+        # partial fetch
+        objs = list(self.F.objects.all())
+        fetch_related(objs, {
+            'ref_a': ["id"],
+        })
+        self.assertEqual(objs[0].ref_a, None)
 
 
 class UtilsTestCase(unittest.TestCase):
