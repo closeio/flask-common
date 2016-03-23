@@ -234,8 +234,8 @@ def fetch_related(objs, field_dict, cache_map=None):
         if isinstance(field, SafeReferenceField):
             ids = { id_from_value(field, obj._db_data.get(db_field, None)) for obj in objs if field_name not in obj._internal_data and obj._db_data.get(db_field, None) }
         elif isinstance(field, SafeReferenceListField):
-            ids = { obj._db_data.get(db_field, []) for obj in objs if field_name not in obj._internal_data }
-            ids = { id_from_value(field.field, item) for sublist in ids for item in sublist } # flatten
+            ids = [ obj._db_data.get(db_field, []) for obj in objs if field_name not in obj._internal_data ]
+            ids = { id_from_value(field.field, item) for sublist in ids for item in sublist } # flatten the list of lists
         elif isinstance(field, ReferenceField):
             ids = { getattr(obj, field_name).pk for obj in objs if getattr(obj, field_name, None) and getattr(getattr(obj, field_name), '_lazy', False) }
 
