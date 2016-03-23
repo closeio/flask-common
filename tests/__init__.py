@@ -10,7 +10,8 @@ from dateutil.tz import tzutc
 from flask import Flask
 from mongoengine import connection, Document
 from mongoengine.errors import DoesNotExist
-from mongoengine.fields import ReferenceField, SafeReferenceListField, StringField
+from mongoengine.fields import ReferenceField, SafeReferenceField, \
+                               SafeReferenceListField, StringField
 from werkzeug.datastructures import MultiDict
 from wtforms import Form
 
@@ -453,15 +454,21 @@ class FetchRelatedTestCase(unittest.TestCase):
             ref_c = ReferenceField(C)
             ref_a = ReferenceField(A)
 
+        class E(db.Document):
+            refs_a = SafeReferenceListField(ReferenceField(A))
+            ref_b = SafeReferenceField(B)
+
         A.drop_collection()
         B.drop_collection()
         C.drop_collection()
         D.drop_collection()
+        E.drop_collection()
 
         self.A = A
         self.B = B
         self.C = C
         self.D = D
+        self.E = E
 
         self.a1 = A.objects.create(txt='a1')
         self.a2 = A.objects.create(txt='a2')
@@ -470,6 +477,10 @@ class FetchRelatedTestCase(unittest.TestCase):
         self.b2 = B.objects.create(ref=self.a2)
         self.c1 = C.objects.create(ref_a=self.a3)
         self.d1 = D.objects.create(ref_c=self.c1, ref_a=self.a3)
+        self.e1 = E.objects.create(
+            refs_a=[self.a1, self.a2, self.a3],
+            ref_b=self.b1
+        )
 
     def test_fetch_related(self):
         with custom_query_counter() as q:
@@ -588,6 +599,46 @@ class FetchRelatedTestCase(unittest.TestCase):
             self.A: { self.a3.pk: self.a3 },
             self.C: {}
         })
+
+    def test_safe_reference_fields(self):
+        """
+        Make sure SafeReferenceField and SafeReferenceListField don't fetch
+        the entire objects if we use a partial fetch_related on them.
+        """
+        objs = list(self.E.objects.all())
+
+        with custom_query_counter() as q:
+            fetch_related(objs, {
+                'refs_a': ["id"],
+                'ref_b': ["id"]
+            })
+
+        # make sure the IDs match
+        self.assertEqual(
+            [a.pk for a in objs[0].refs_a],
+            [self.a1.pk, self.a2.pk, self.a3.pk]
+        )
+        self.assertEqual(objs[0].ref_b.pk, self.b1.pk)
+
+        # make sure other fields are empty
+        self.assertEqual(set([a.txt for a in objs[0].refs_a]), set([None]))
+        self.assertEqual(objs[0].ref_b.ref, None)
+
+        # make sure the queries to MongoDB only fetched the IDs
+        queries = list(q.db.system.profile.find({}, { 'ns': 1, 'execStats': 1 }))
+        self.assertEqual(
+            set([ q['ns'] for q in queries ]),
+            set([ 'common_example_app.a', 'common_example_app.b' ])
+        )
+        self.assertEqual(
+            set([ q['execStats']['stage'] for q in queries ]),
+            set([ 'PROJECTION' ]),
+        )
+        self.assertEqual(
+            set([ tuple(q['execStats']['transformBy'].keys()) for q in queries ]),
+            set([ ('_id',) ]),
+        )
+
 
 class UtilsTestCase(unittest.TestCase):
 
