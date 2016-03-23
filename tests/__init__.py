@@ -542,7 +542,7 @@ class FetchRelatedTestCase(unittest.TestCase):
         self.assertTrue(objs[0].ref_c.pk)  # pk still exists even though the reference is broken
         self.assertRaises(DoesNotExist, lambda: objs[0].ref_c.ref_a)
 
-    def test_fetch_related_certain_fields(self):
+    def test_partial_fetch_related(self):
         """
         Make sure we can only fetch particular fields of a reference.
         """
@@ -556,13 +556,11 @@ class FetchRelatedTestCase(unittest.TestCase):
         self.assertEqual(objs[0].ref.txt, None)
         self.assertTrue(self.a1.txt)
 
-        # TODO query counter
-
-    def test_fetch_certain_fields_limitation(self):
+    def test_partial_fetch_fields_conflict(self):
         """
         Fetching certain fields via fetch_related has a limitation that
-        different fields cannot be fetched for the same document types.
-        Make sure that's contraint is respected.
+        different fields cannot be fetched for the same document class.
+        Make sure that contraint is respected.
         """
         objs = list(self.B.objects.all()) + list(self.C.objects.all())
         self.assertRaises(RuntimeError, fetch_related, objs, {
@@ -570,6 +568,26 @@ class FetchRelatedTestCase(unittest.TestCase):
             'ref_a': True
         })
 
+    def test_partial_fetch_cache_map(self):
+        """
+        Make sure doing a partial fetch in fetch_related doesn't cache
+        the results (it could be dangerous for any subsequent fetch_related
+        call).
+        """
+        cache_map = {}
+        objs = list(self.D.objects.all())
+        fetch_related(objs, {
+            'ref_a': True,
+            'ref_c': ["id"]
+        }, cache_map=cache_map)
+        self.assertEqual(objs[0].ref_c.pk, self.c1.pk)
+        self.assertEqual(objs[0].ref_a.pk, self.a3.pk)
+
+        # C reference shouldn't be cached because it was a partial fetch
+        self.assertEqual(cache_map, {
+            self.A: { self.a3.pk: self.a3 },
+            self.C: {}
+        })
 
 class UtilsTestCase(unittest.TestCase):
 
