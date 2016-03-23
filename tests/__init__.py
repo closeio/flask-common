@@ -631,10 +631,10 @@ class FetchRelatedTestCase(unittest.TestCase):
         self.assertEqual(objs[0].ref_b.ref, None)
 
         # make sure the queries to MongoDB only fetched the IDs
-        queries = list(q.db.system.profile.find({}, { 'ns': 1, 'execStats': 1 }))
+        queries = list(q.db.system.profile.find({ 'op': 'query' }, { 'ns': 1, 'execStats': 1 }))
         self.assertEqual(
-            set([ q['ns'] for q in queries ]),
-            set([ 'common_example_app.a', 'common_example_app.b' ])
+            set([ q['ns'].split('.')[1] for q in queries ]),
+            set([ 'a', 'b' ])
         )
         self.assertEqual(
             set([ q['execStats']['stage'] for q in queries ]),
