@@ -269,7 +269,7 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     # Fetch objects and cache them
     for document_class, fetch_opts in fetch_map.iteritems():
-        qs = document_class.objects.filter(pk__in=fetch_opts['ids'])
+        qs = document_class.objects.filter(pk__in=fetch_opts['ids']).clear_initial_query()
 
         # only fetch the requested fields
         if fetch_opts['fields_to_fetch']:
@@ -297,32 +297,32 @@ def fetch_related(objs, field_dict, cache_map=None):
         # merge the permanent and temporary caches for the ease of assignment
         pk_to_obj = cache_map.get(document_class, {}).copy()
         pk_to_obj.update(partial_cache_map.get(document_class, {}))
-        if pk_to_obj:
 
-            # if a dict of subfields was passed, go recursive
-            if isinstance(sub_field_dict, dict):
-                fetch_related(pk_to_obj.values(), sub_field_dict, cache_map=cache_map)
+        # if a dict of subfields was passed, go recursive
+        if pk_to_obj and isinstance(sub_field_dict, dict):
+            fetch_related(pk_to_obj.values(), sub_field_dict, cache_map=cache_map)
 
-            for obj in objs:
-                if isinstance(field, SafeReferenceField):
-                    if field_name not in obj._internal_data:
-                        val = obj._db_data.get(db_field, None)
-                        if val:
-                            setattr_unchanged(obj, field_name,
-                                    pk_to_obj.get(id_from_value(field, val)))
+        # attach all the values to all the objects
+        for obj in objs:
+            if isinstance(field, SafeReferenceField):
+                if field_name not in obj._internal_data:
+                    val = obj._db_data.get(db_field, None)
+                    if val:
+                        setattr_unchanged(obj, field_name,
+                                pk_to_obj.get(id_from_value(field, val)))
 
-                elif isinstance(field, ReferenceField):
-                    val = getattr(obj, field_name, None)
-                    if val and getattr(val, '_lazy', False):
-                        rel_obj = pk_to_obj.get(val.pk)
-                        if rel_obj:
-                            setattr_unchanged(obj, field_name, rel_obj)
+            elif isinstance(field, ReferenceField):
+                val = getattr(obj, field_name, None)
+                if val and getattr(val, '_lazy', False):
+                    rel_obj = pk_to_obj.get(val.pk)
+                    if rel_obj:
+                        setattr_unchanged(obj, field_name, rel_obj)
 
-                elif isinstance(field, SafeReferenceListField):
-                    if field_name not in obj._internal_data:
-                        value = filter(None, [pk_to_obj.get(id_from_value(field.field, val))
-                                for val in obj._db_data.get(db_field, [])])
-                        setattr_unchanged(obj, field_name, value)
+            elif isinstance(field, SafeReferenceListField):
+                if field_name not in obj._internal_data:
+                    value = filter(None, [pk_to_obj.get(id_from_value(field.field, val))
+                            for val in obj._db_data.get(db_field, [])])
+                    setattr_unchanged(obj, field_name, value)
 
 
 class ForbiddenQueryException(Exception):
