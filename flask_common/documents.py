@@ -125,36 +125,58 @@ def fetch_related(objs, field_dict, cache_map=None):
         'lead': {
             'created_by': True,
             'updated_by': True,
-        }
+        },
+        'contact': ['id'],
     })
 
     In this sample, users and leads for all objs will be fetched and attached.
-    Then, created_by and updated_by users are fetched in one query and attached.
+    Then, lead.created_by and lead.updated_by users are fetched in one query
+    and attached. Finally, a contact will be pulled in, only fetching the ID
+    from the database.
 
     Note that the function doesn't merge queries for the same document class
     across multiple (recursive) function calls, but it never fetches the same
     related object twice.
+
+    Be *very* cautious when pulling in only specific fields for a related
+    object. Accessing fields that haven't been pulled will falsely show None
+    even if a value for that field exists in the database.
+
+    Given how fragile partially pulled objects are, we don't cache them in the
+    cache map and hence the same related object may be fetched more than once.
 
     If you need to call fetch_related multiple times, it's worth passing a
     cache_map (initially it can be an empty dictionary). It will be extended
     during each call to include all the objects fetched up until the current
     call. This way we ensure that the same objects aren't fetched more than
     once across multiple fetch_related calls. Cache map has a form of:
-    { DocumentClass: [list, of, objects, fetched, for, a, given, class] }.
+    { DocumentClass: { id_of_fetched_obj: obj, id_of_fetched_obj2: obj2 } }.
     """
 
     if not objs:
         return
 
+    # Cache map holds a map of pks to objs for objects we fetched, over all
+    # iterations / from previous calls, by document class (doesn't include
+    # partially fetched objects)
     if cache_map == None:
-        # list of objects that we fetched, over all iterations / from previous calls, by document class
         cache_map = {}
 
-    # ids of objects that will be fetched in this iteration, by document class
-    id_set_map = {}
+    # Cache map for partial fetches (i.e. ones where only specific fields
+    # were requested). is only temporary since we don't want to cache partial
+    # data through subsequent calls of this function
+    partial_cache_map = {}
 
-    # Helper mapping: field_name -> field, db_field, document_class
-    field_cache = {}
+    # Helper mapping: field_name -> (
+    #   field instance,
+    #   name of the field in the db,
+    #   document class,
+    #   fields to fetch (or None if the whole related obj should be fetched)
+    # )
+    field_info = {}
+
+    # IDs to fetch and their fetch options, by document class
+    fetch_map = {}
 
     def id_from_value(field, val):
         if field.dbref:
@@ -182,6 +204,7 @@ def fetch_related(objs, field_dict, cache_map=None):
         if not changed and key in obj._changed_fields:
             obj._changed_fields.remove(key)
 
+    # Populate the field_info
     instances = get_instance_for_each_type(objs)
     for field_name, sub_field_dict in field_dict.iteritems():
 
@@ -198,82 +221,104 @@ def fetch_related(objs, field_dict, cache_map=None):
             document_class = field.field.document_type
         else:
             raise NotImplementedError('%s class not supported for fetch_related' % field.__class__.__name__)
-        field_cache[field_name] = (field, db_field, document_class)
+        fields_to_fetch = sub_field_dict if isinstance(sub_field_dict, (list, tuple)) else None
+        field_info[field_name] = (field, db_field, document_class, fields_to_fetch)
 
     # Determine what IDs we want to fetch
     for field_name, sub_field_dict in field_dict.iteritems():
-        field, db_field, document_class = field_cache.get(field_name) or (None, None, None)
+        field, db_field, document_class, fields_to_fetch = field_info.get(field_name) or (None, None, None, None)
         if not field:
             continue
 
+        # we need to use _db_data for safe references because touching their pks triggers a query
         if isinstance(field, SafeReferenceField):
-            refs = [id_from_value(field, obj._db_data.get(db_field, None)) for obj in objs if field_name not in obj._internal_data and obj._db_data.get(db_field, None)]
-        elif isinstance(field, ReferenceField):
-            refs = [getattr(obj, field_name).pk for obj in objs if getattr(obj, field_name, None) and getattr(getattr(obj, field_name), '_lazy', False)]
+            ids = { id_from_value(field, obj._db_data.get(db_field, None)) for obj in objs if field_name not in obj._internal_data and obj._db_data.get(db_field, None) }
         elif isinstance(field, SafeReferenceListField):
-            refs = [obj._db_data.get(db_field, []) for obj in objs if field_name not in obj._internal_data]
-            refs = [id_from_value(field.field, item) for sublist in refs for item in sublist] # flatten
+            ids = [ obj._db_data.get(db_field, []) for obj in objs if field_name not in obj._internal_data ]
+            ids = { id_from_value(field.field, item) for sublist in ids for item in sublist } # flatten the list of lists
+        elif isinstance(field, ReferenceField):
+            ids = { getattr(obj, field_name).pk for obj in objs if getattr(obj, field_name, None) and getattr(getattr(obj, field_name), '_lazy', False) }
 
-        if refs:
-            if not document_class in cache_map:
-                rel_obj_map = cache_map[document_class] = {}
-            else:
-                rel_obj_map = cache_map[document_class]
+        # remove ids of objects that are already in the cache map
+        if document_class in cache_map:
+            ids -= set(cache_map[document_class])
 
-            if not document_class in id_set_map:
-                id_set = id_set_map[document_class] = set()
-            else:
-                id_set = id_set_map[document_class]
+        # no point setting up the data structures for fields where there's nothing to fetch
+        if not ids:
+            continue
 
-            # Never fetch already fetched objects
-            id_set.update(set(refs) - set(rel_obj_map.keys()))
+        # set up a cache map for the newly seen document class
+        if document_class not in cache_map:
+            cache_map[document_class] = {}
+            partial_cache_map[document_class] = {}
 
-    # Fetch objects
-    for document_class, id_set in id_set_map.iteritems():
-        rel_obj_map = cache_map[document_class]
+        # set up a fetch map for this document class
+        if document_class in fetch_map:
+            fetch_map[document_class]['ids'] |= ids
 
-        if id_set:
-            id_set = list(id_set)
-            if len(id_set) == 1:
-                rel_obj_map.update({ id_set[0]: document_class.objects.filter(pk=id_set[0]).first() })
-            else:
-                rel_obj_map.update(
-                    document_class.objects.in_bulk(id_set)
-                )
+            # make sure we don't allow partial fetching if the same document class
+            # has conflicting fields_to_fetch (e.g. { user: ["id"], created_by: True })
+            # TODO this could be improved to fetch a union of all requested fields
+            if fields_to_fetch !=  fetch_map[document_class]['fields_to_fetch']:
+                raise RuntimeError('Cannot specify different fields_to_fetch for the same document class %s' % document_class)
+        else:
+            fetch_map[document_class] = {
+                'ids': ids,
+                'fields_to_fetch': fields_to_fetch
+            }
+
+    # Fetch objects and cache them
+    for document_class, fetch_opts in fetch_map.iteritems():
+        qs = document_class.objects.filter(pk__in=fetch_opts['ids']).clear_initial_query()
+
+        # only fetch the requested fields
+        if fetch_opts['fields_to_fetch']:
+            qs = qs.only(*fetch_opts['fields_to_fetch'])
+
+        # update the cache map - either the persistent one with full objects,
+        # or the ephemeral partial cache
+        update_dict = { obj.pk: obj for obj in qs }
+        if fetch_opts['fields_to_fetch'] is None:
+            cache_map[document_class].update(update_dict)
+        else:
+            partial_cache_map[document_class].update(update_dict)
 
     # Assign objects
     for field_name, sub_field_dict in field_dict.iteritems():
-        field, db_field, document_class = field_cache.get(field_name) or (None, None, None)
+        field, db_field, document_class, fields_to_fetch = field_info.get(field_name) or (None, None, None, None)
 
         if not field:
             continue
 
-        rel_obj_map = cache_map.get(document_class)
-        if rel_obj_map:
-            # Go recursive
-            if isinstance(sub_field_dict, dict):
-                fetch_related(rel_obj_map.values(), sub_field_dict, cache_map=cache_map)
+        # merge the permanent and temporary caches for the ease of assignment
+        pk_to_obj = cache_map.get(document_class, {}).copy()
+        pk_to_obj.update(partial_cache_map.get(document_class, {}))
 
-            for obj in objs:
-                if isinstance(field, SafeReferenceField):
-                    if field_name not in obj._internal_data:
-                        val = obj._db_data.get(db_field, None)
-                        if val:
-                            setattr_unchanged(obj, field_name,
-                                    rel_obj_map.get(id_from_value(field, val)))
+        # if a dict of subfields was passed, go recursive
+        if pk_to_obj and isinstance(sub_field_dict, dict):
+            fetch_related(pk_to_obj.values(), sub_field_dict, cache_map=cache_map)
 
-                elif isinstance(field, ReferenceField):
-                    val = getattr(obj, field_name, None)
-                    if val and getattr(val, '_lazy', False):
-                        rel_obj = rel_obj_map.get(val.pk)
-                        if rel_obj:
-                            setattr_unchanged(obj, field_name, rel_obj)
+        # attach all the values to all the objects
+        for obj in objs:
+            if isinstance(field, SafeReferenceField):
+                if field_name not in obj._internal_data:
+                    val = obj._db_data.get(db_field, None)
+                    if val:
+                        setattr_unchanged(obj, field_name,
+                                pk_to_obj.get(id_from_value(field, val)))
 
-                elif isinstance(field, SafeReferenceListField):
-                    if field_name not in obj._internal_data:
-                        value = filter(None, [rel_obj_map.get(id_from_value(field.field, val))
-                                for val in obj._db_data.get(db_field, [])])
-                        setattr_unchanged(obj, field_name, value)
+            elif isinstance(field, ReferenceField):
+                val = getattr(obj, field_name, None)
+                if val and getattr(val, '_lazy', False):
+                    rel_obj = pk_to_obj.get(val.pk)
+                    if rel_obj:
+                        setattr_unchanged(obj, field_name, rel_obj)
+
+            elif isinstance(field, SafeReferenceListField):
+                if field_name not in obj._internal_data:
+                    value = filter(None, [pk_to_obj.get(id_from_value(field.field, val))
+                            for val in obj._db_data.get(db_field, [])])
+                    setattr_unchanged(obj, field_name, value)
 
 
 class ForbiddenQueryException(Exception):

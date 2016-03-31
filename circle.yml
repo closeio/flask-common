@@ -1,0 +1,12 @@
+machine:
+  environment:
+    MONGO_VERSION: 3.0.7
+
+dependencies:
+  cache_directories:
+    - custom_mongodb
+  pre:
+    - sudo /etc/init.d/mongodb stop
+    - if [[ ! -d "custom_mongodb" ]]; then wget http://downloads.mongodb.org/linux/mongodb-linux-x86_64-${MONGO_VERSION}.tgz && tar xvzf mongodb-linux-x86_64-${MONGO_VERSION}.tgz && mv mongodb-linux-x86_64-${MONGO_VERSION} custom_mongodb; fi
+    - sudo cp custom_mongodb/bin/* /usr/bin
+    - sudo /etc/init.d/mongodb start
