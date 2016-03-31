@@ -247,9 +247,10 @@ def fetch_related(objs, field_dict, cache_map=None):
         if not ids:
             continue
 
-        # set up a cache map for the newly seen document class
+        # set up cache maps for the newly seen document class
         if document_class not in cache_map:
             cache_map[document_class] = {}
+        if document_class not in partial_cache_map:
             partial_cache_map[document_class] = {}
 
         # set up a fetch map for this document class
