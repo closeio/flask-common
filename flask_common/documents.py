@@ -275,10 +275,6 @@ def fetch_related(objs, field_dict, cache_map=None):
         if fetch_opts['fields_to_fetch']:
             qs = qs.only(*fetch_opts['fields_to_fetch'])
 
-        # since ids are unique, we can set a limit equal to the length
-        # of the ids set (helps with performance)
-        qs = qs.limit(len(fetch_opts['ids']))
-
         # update the cache map - either the persistent one with full objects,
         # or the ephemeral partial cache
         update_dict = { obj.pk: obj for obj in qs }
