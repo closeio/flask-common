@@ -664,6 +664,30 @@ class FetchRelatedTestCase(unittest.TestCase):
         })
         self.assertEqual(objs[0].ref_a, None)
 
+    def test_fetch_same_doc_class_multiple_times_with_cache_map(self):
+        """
+        Make sure that the right documents are fetched when we reuse a cache
+        map for the same document type and the second fetch_related is a
+        partial fetch.
+        """
+        self.b1.reload()
+        self.c1.reload()
+        cache_map = {}
+        objs = [self.b1, self.c1]
+        with custom_query_counter() as q:
+            fetch_related(objs, {
+                'ref': True
+            }, cache_map=cache_map)
+            fetch_related(objs, {
+                'ref_a': ['id']
+            }, cache_map=cache_map)
+
+            self.assertEqual(q, 2)
+            self.assertEqual(
+                [op['query']['_id']['$in'][0] for op in q.db.system.profile.find({ 'op': 'query' })],
+                [self.a1.pk, self.a3.pk]
+            )
+
 
 class UtilsTestCase(unittest.TestCase):
 
