@@ -83,7 +83,7 @@ def local_request(view, method='GET', data=None, view_args=None, user=None, api_
         json_data = json.loads(resp.data)
     except Exception as e:
         ctx.pop()
-        raise e
+        raise
     else:
         ctx.pop()
 
