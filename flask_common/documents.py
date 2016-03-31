@@ -221,7 +221,7 @@ def fetch_related(objs, field_dict, cache_map=None):
             document_class = field.field.document_type
         else:
             raise NotImplementedError('%s class not supported for fetch_related' % field.__class__.__name__)
-        fields_to_fetch = sub_field_dict if isinstance(sub_field_dict, list) else None
+        fields_to_fetch = sub_field_dict if isinstance(sub_field_dict, (list, tuple)) else None
         field_info[field_name] = (field, db_field, document_class, fields_to_fetch)
 
     # Determine what IDs we want to fetch
