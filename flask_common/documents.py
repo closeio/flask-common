@@ -107,7 +107,16 @@ class SoftDeleteDocument(Document):
         # delete only if already saved
         if self.pk:
             self.is_deleted = True
-            self.update(set__is_deleted=self.is_deleted, update_date=False)
+            update_kwargs = {
+                'set__is_deleted': self.is_deleted
+            }
+
+            # we don't want to update date_updated for deleted objects (in
+            # case they inherit from DocumentBase)
+            if isinstance(self, DocumentBase):
+                update_kwargs['update_date'] = False
+
+            self.update(**update_kwargs)
 
     @queryset_manager
     def all_objects(doc_cls, queryset):
