@@ -76,7 +76,8 @@ class DocumentBase(Document):
         return super(DocumentBase, self).save(*args, **kwargs)
 
     def update(self, *args, **kwargs):
-        if 'set__date_updated' not in kwargs:
+        update_date = kwargs.pop('update_date', True)
+        if update_date and 'set__date_updated' not in kwargs:
             kwargs['set__date_updated'] = datetime.datetime.utcnow()
         super(DocumentBase, self).update(*args, **kwargs)
 
@@ -106,7 +107,7 @@ class SoftDeleteDocument(Document):
         # delete only if already saved
         if self.pk:
             self.is_deleted = True
-            self.update(set__is_deleted=self.is_deleted)
+            self.update(set__is_deleted=self.is_deleted, update_date=False)
 
     @queryset_manager
     def all_objects(doc_cls, queryset):
