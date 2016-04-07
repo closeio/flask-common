@@ -138,16 +138,16 @@ class DocTestCase(unittest.TestCase):
         )
         doc.reload()
 
-        self.assertEqual(doc.date_created, new_date_created)
-        self.assertEqual(doc.date_updated, new_date_updated)
+        self.assertEqual(doc.date_created.replace(tzinfo=None), new_date_created)
+        self.assertEqual(doc.date_updated.replace(tzinfo=None), new_date_updated)
 
         time.sleep(0.001)  # make sure some time passes between the updates
         doc.update(set__text='newest', update_date=False)
         doc.reload()
 
         self.assertEqual(doc.text, 'newest')
-        self.assertEqual(doc.date_created, new_date_created)
-        self.assertEqual(doc.date_updated, new_date_updated)
+        self.assertEqual(doc.date_created.replace(tzinfo=None), new_date_created)
+        self.assertEqual(doc.date_updated.replace(tzinfo=None), new_date_updated)
 
 
 class SoftDeleteTestCase(unittest.TestCase):
