@@ -206,6 +206,7 @@ class SoftDeleteTestCase(unittest.TestCase):
 
     def test_date_updated(self):
         a = self.Person.objects.create(name='Anthony')
+        a.reload()
         last_date_updated = a.date_updated
 
         time.sleep(0.001)  # make sure some time passes between the updates
