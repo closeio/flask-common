@@ -58,6 +58,10 @@ class DocumentBase(Document):
     date_created = DateTimeField(required=True)
     date_updated = DateTimeField(required=True)
 
+    meta = {
+        'abstract': True,
+    }
+
     def _type(self):
         return unicode(self.__class__.__name__)
 
@@ -71,9 +75,11 @@ class DocumentBase(Document):
             self.date_updated = now
         return super(DocumentBase, self).save(*args, **kwargs)
 
-    meta = {
-        'abstract': True,
-    }
+    def update(self, *args, **kwargs):
+        update_date = kwargs.pop('update_date', True)
+        if update_date and 'set__date_updated' not in kwargs:
+            kwargs['set__date_updated'] = datetime.datetime.utcnow()
+        super(DocumentBase, self).update(*args, **kwargs)
 
 
 class NotDeletedQuerySet(QuerySet):
