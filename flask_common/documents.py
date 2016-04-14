@@ -110,12 +110,6 @@ class SoftDeleteDocument(Document):
             update_kwargs = {
                 'set__is_deleted': self.is_deleted
             }
-
-            # we don't want to update date_updated for deleted objects (in
-            # case they inherit from DocumentBase)
-            if isinstance(self, DocumentBase):
-                update_kwargs['update_date'] = False
-
             self.update(**update_kwargs)
 
     @queryset_manager
