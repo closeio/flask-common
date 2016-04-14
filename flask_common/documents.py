@@ -107,10 +107,7 @@ class SoftDeleteDocument(Document):
         # delete only if already saved
         if self.pk:
             self.is_deleted = True
-            update_kwargs = {
-                'set__is_deleted': self.is_deleted
-            }
-            self.update(**update_kwargs)
+            self.update(set__is_deleted=self.is_deleted)
 
     @queryset_manager
     def all_objects(doc_cls, queryset):
