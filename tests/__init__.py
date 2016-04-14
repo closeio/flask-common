@@ -220,7 +220,7 @@ class SoftDeleteTestCase(unittest.TestCase):
         a.delete()
         a.reload()
 
-        self.assertEqual(a.date_updated, last_date_updated)
+        self.assertTrue(a.date_updated > last_date_updated)
         self.assertEqual(a.is_deleted, True)
 
 
