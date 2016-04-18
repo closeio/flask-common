@@ -41,7 +41,7 @@ class SetCompare(object):
 
 class RegexSetCompare(object):
     """
-    Comparator that tages a regex and a set of arguments and doesn't take
+    Comparator that takes a regex and a set of arguments and doesn't take
     ordering of the arguments into account. For example, the following
     expression is True:
 
