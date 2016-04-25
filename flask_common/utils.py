@@ -660,7 +660,8 @@ class Reader(object):
             return one.strip(), two.strip()
 
         s = StringIO.StringIO(line)
-        seq = [x.strip() for x in unicode_csv_reader(s).next()]
+        # http://stackoverflow.com/questions/6879596/why-is-the-python-csv-reader-ignoring-double-quoted-fields
+        seq = [x.strip() for x in unicode_csv_reader(s, skipinitialspace=True).next()]
         if not seq:
             raise FileFormatException("Line does not contain any valid data.")
         if one_to_many:
