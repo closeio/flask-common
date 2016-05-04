@@ -365,7 +365,7 @@ class ForbiddenQueriesQuerySet(QuerySet):
         except RuntimeError:
             pass
 
-        if self._marked_as_safe or is_testing:
+        if self._marked_as_safe or self._none or is_testing:
             return
 
         query_shape = self._get_query_shape(self._query)
