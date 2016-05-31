@@ -17,14 +17,15 @@ class Client(werkzeug_test_client):
         if 'json' in kwargs and 'data' not in kwargs:
             kwargs['data'] = json.dumps(kwargs.pop('json'))
 
-        resp = super(Client, self).open(*args, **kwargs)
+        with current_app.app_context():
+            resp = super(Client, self).open(*args, **kwargs)
 
-        try:
-            resp.json = lambda: json.loads(resp.data)
-        except ValueError:
-            pass
+            try:
+                resp.json = lambda: json.loads(resp.data)
+            except ValueError:
+                pass
 
-        return resp
+            return resp
 
 class ApiClient(Client):
     """
