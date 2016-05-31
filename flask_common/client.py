@@ -17,19 +17,18 @@ class Client(werkzeug_test_client):
         if 'json' in kwargs and 'data' not in kwargs:
             kwargs['data'] = json.dumps(kwargs.pop('json'))
 
-        with current_app.app_context():
-            resp = super(Client, self).open(*args, **kwargs)
+        resp = super(Client, self).open(*args, **kwargs)
 
-            try:
-                resp.json = lambda: json.loads(resp.data)
-            except ValueError:
-                pass
+        try:
+            resp.json = lambda: json.loads(resp.data)
+        except ValueError:
+            pass
 
-            return resp
+        return resp
 
 class ApiClient(Client):
     """
-    API test client that supports JSON and uses the given API key.
+    API client that supports JSON and uses the given API key in a separate app context.
     """
     def __init__(self, app, api_key=None):
         self.api_key = api_key
@@ -44,7 +43,8 @@ class ApiClient(Client):
         api_key = kwargs.pop('api_key', self.api_key)
         if 'headers' not in kwargs:
             kwargs['headers'] = self.get_headers(api_key)
-        return super(ApiClient, self).open(*args, **kwargs)
+        with current_app.app_context():
+            return super(ApiClient, self).open(*args, **kwargs)
 
 def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
     """
