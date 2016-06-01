@@ -47,8 +47,10 @@ class ApiClient(Client):
 
 def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
     """
-    Perform a request to the current application's view without the network
-    overhead and return a tuple (response_status_code, response_json_data).
+    Performs a request to the current application's view without the network
+    overhead and without request pre and postprocessing. Returns a tuple
+    (response_status_code, response_json_data).
+
     Examples:
 
     # List leads for a given organization (as seen by user A)
