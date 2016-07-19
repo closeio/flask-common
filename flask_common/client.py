@@ -28,7 +28,7 @@ class Client(werkzeug_test_client):
 
 class ApiClient(Client):
     """
-    API client that supports JSON and uses the given API key in a separate app context.
+    API test client that supports JSON and uses the given API key.
     """
     def __init__(self, app, api_key=None):
         self.api_key = api_key
@@ -43,8 +43,7 @@ class ApiClient(Client):
         api_key = kwargs.pop('api_key', self.api_key)
         if 'headers' not in kwargs:
             kwargs['headers'] = self.get_headers(api_key)
-        with current_app.app_context():
-            return super(ApiClient, self).open(*args, **kwargs)
+        return super(ApiClient, self).open(*args, **kwargs)
 
 def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
     """
