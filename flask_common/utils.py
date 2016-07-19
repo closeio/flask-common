@@ -719,11 +719,11 @@ class custom_query_counter(query_counter):
 
 
     def _get_queries(self):
-        ignore_query = { "$or": [
+        filter_query = { "$or": [
             { "ns": {"$nin": self.get_ignored_collections()}, "op": { "$ne": "killcursors" } },
             { "ns": "{0}.$cmd".format(self.db.name), "command.findAndModify": { "$exists": True } },
         ]}
-        return self.db.system.profile.find(ignore_query)
+        return self.db.system.profile.find(filter_query)
 
     def _get_count(self):
         """ Get the number of queries. """
