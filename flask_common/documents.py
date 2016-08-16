@@ -107,7 +107,7 @@ class SoftDeleteDocument(Document):
     def modify(self, **kwargs):
         if 'set__is_deleted' in kwargs and kwargs['set__is_deleted'] is None:
             raise ValidationError('is_deleted cannot be set to None')
-        super(SoftDeleteDocument, self).update(**kwargs)
+        super(SoftDeleteDocument, self).modify(**kwargs)
 
     def update(self, **kwargs):
         if 'set__is_deleted' in kwargs and kwargs['set__is_deleted'] is None:
@@ -118,7 +118,7 @@ class SoftDeleteDocument(Document):
         # delete only if already saved
         if self.pk:
             self.is_deleted = True
-            self.update(set__is_deleted=self.is_deleted)
+            self.modify(set__is_deleted=self.is_deleted)
 
     @queryset_manager
     def all_objects(doc_cls, queryset):
