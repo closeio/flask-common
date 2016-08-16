@@ -75,6 +75,12 @@ class DocumentBase(Document):
             self.date_updated = now
         return super(DocumentBase, self).save(*args, **kwargs)
 
+    def modify(self, *args, **kwargs):
+        update_date = kwargs.pop('update_date', True)
+        if update_date and 'set__date_updated' not in kwargs:
+            kwargs['set__date_updated'] = datetime.datetime.utcnow()
+        super(DocumentBase, self).modify(*args, **kwargs)
+
     def update(self, *args, **kwargs):
         update_date = kwargs.pop('update_date', True)
         if update_date and 'set__date_updated' not in kwargs:
@@ -98,6 +104,11 @@ class NotDeletedQuerySet(QuerySet):
 class SoftDeleteDocument(Document):
     is_deleted = BooleanField(default=False, required=True)
 
+    def modify(self, **kwargs):
+        if 'set__is_deleted' in kwargs and kwargs['set__is_deleted'] is None:
+            raise ValidationError('is_deleted cannot be set to None')
+        super(SoftDeleteDocument, self).modify(**kwargs)
+
     def update(self, **kwargs):
         if 'set__is_deleted' in kwargs and kwargs['set__is_deleted'] is None:
             raise ValidationError('is_deleted cannot be set to None')
@@ -107,7 +118,7 @@ class SoftDeleteDocument(Document):
         # delete only if already saved
         if self.pk:
             self.is_deleted = True
-            self.update(set__is_deleted=self.is_deleted)
+            self.modify(set__is_deleted=self.is_deleted)
 
     @queryset_manager
     def all_objects(doc_cls, queryset):
