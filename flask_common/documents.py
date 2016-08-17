@@ -79,7 +79,7 @@ class DocumentBase(Document):
         update_date = kwargs.pop('update_date', True)
         if update_date and 'set__date_updated' not in kwargs:
             kwargs['set__date_updated'] = datetime.datetime.utcnow()
-        super(DocumentBase, self).modify(*args, **kwargs)
+        return super(DocumentBase, self).modify(*args, **kwargs)
 
     def update(self, *args, **kwargs):
         update_date = kwargs.pop('update_date', True)
@@ -107,7 +107,7 @@ class SoftDeleteDocument(Document):
     def modify(self, **kwargs):
         if 'set__is_deleted' in kwargs and kwargs['set__is_deleted'] is None:
             raise ValidationError('is_deleted cannot be set to None')
-        super(SoftDeleteDocument, self).modify(**kwargs)
+        return super(SoftDeleteDocument, self).modify(**kwargs)
 
     def update(self, **kwargs):
         if 'set__is_deleted' in kwargs and kwargs['set__is_deleted'] is None:
