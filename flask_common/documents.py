@@ -18,8 +18,9 @@ class RandomPKDocument(Document):
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__, self.id)
 
-    def get_pk_prefix(self):
-        return self._get_collection_name()[:4]
+    @classmethod
+    def get_pk_prefix(cls):
+        return cls._get_collection_name()[:4]
 
     def save(self, *args, **kwargs):
         old_id = self.id
