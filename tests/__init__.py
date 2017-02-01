@@ -20,7 +20,6 @@ from flask.ext.mongoengine import MongoEngine, ValidationError
 from flask_common.crypto import aes_generate_key
 from flask_common.declenum import DeclEnum
 from flask_common.documents import fetch_related
-from flask_common.test_helpers import FreezeTimeMixin
 from flask_common.utils import apply_recursively, isortedset, slugify, custom_query_counter, uniqify
 from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, \
                                 EncryptedStringField, LowerStringField, LowerEmailField
@@ -797,20 +796,6 @@ class DeclEnumTestCase(unittest.TestCase):
 
         db_type = TestEnum.db_type()
         self.assertEqual(db_type.enum.values(), ['alpha_value', 'beta_value'])
-
-class FreezeTimeTestCase(FreezeTimeMixin, unittest.TestCase):
-    def test_freezetime(self):
-        d = datetime.datetime(2001, 01, 01)
-        now = datetime.datetime.now()
-        self.freeze(d)
-        self.assertEquals(d.date(), datetime.date.today())
-
-        d2 = datetime.datetime(2001, 01, 02)
-        self.freeze(d2)
-        self.assertEquals(d2.date(), datetime.date.today())
-
-        self.unfreeze()
-        self.assertEquals(datetime.date.today(), now.date())
 
 
 if __name__ == '__main__':
