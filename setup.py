@@ -18,5 +18,5 @@ setup(
         'flask_common',
     ],
     test_suite='tests',
-    tests_require=['python-dateutil', 'freezegun', 'pytz', 'flask', 'mongoengine', 'pycrypto', 'padding', ]
+    tests_require=['python-dateutil', 'pytz', 'flask', 'mongoengine', 'pycrypto', 'padding', ]
 )
