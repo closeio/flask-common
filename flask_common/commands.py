@@ -119,7 +119,7 @@ class Test(flask_script.Command):
                 raise Exception('Must use flask_common.commands.Manager when '
                                 'passing args to the Test() command.')
 
-        return self.run(app, *args, **kwargs)
+        return super(Test, self).__call__(app, *args, **kwargs)
 
     def create_parser(self, *args, **kwargs):
         # Override the default parser so we can pass all arguments to pytest.
@@ -132,7 +132,7 @@ class Test(flask_script.Command):
         self.parent = parent
         return parser
 
-    def run(self, app, args):
+    def run(self, args):
         # Keep imports inlined so they're not unnecessarily imported.
         import pytest
         import sys
