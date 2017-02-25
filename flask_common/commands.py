@@ -111,9 +111,14 @@ class Test(flask_script.Command):
     def __call__(self, app=None, *args, **kwargs):
         # By default, use the manager's app object, but if a callable was
         # passed we can forward all args.
-        if isinstance(app, FlaskProxy):
-            app = self.parent.get_or_create_app(*self.app_args,
-                                                **self.app_kwargs)
+        if self.app_args or self.app_kwargs:
+            if isinstance(app, FlaskProxy):
+                app = self.parent.get_or_create_app(*self.app_args,
+                                                    **self.app_kwargs)
+            else:
+                raise Exception('Must use flask_common.commands.Manager when '
+                                'passing args to the Test() command.')
+
         return self.run(app, *args, **kwargs)
 
     def create_parser(self, *args, **kwargs):
