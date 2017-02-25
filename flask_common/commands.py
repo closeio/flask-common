@@ -109,7 +109,11 @@ class Test(flask_script.Command):
         self.app_kwargs = kwargs
 
     def __call__(self, app=None, *args, **kwargs):
-        app = self.parent.get_or_create_app(*self.app_args, **self.app_kwargs)
+        # By default, use the manager's app object, but if a callable was
+        # passed we can forward all args.
+        if isinstance(app, FlaskProxy):
+            app = self.parent.get_or_create_app(*self.app_args,
+                                                **self.app_kwargs)
         return self.run(app, *args, **kwargs)
 
     def create_parser(self, *args, **kwargs):
@@ -123,16 +127,7 @@ class Test(flask_script.Command):
         self.parent = parent
         return parser
 
-    def setup_app(self, app):
-        # By default, use the manager's app object, but if a callable was
-        # passed we can forward all args.
-        if self.app_args or self.app_kwargs:
-            app = self.parent.get_or_create_app(*self.app_args, **self.app_kwargs)
-        return app
-
     def run(self, app, args):
-        app = self.setup_app(app)
-
         # Keep imports inlined so they're not unnecessarily imported.
         import pytest
         import sys
