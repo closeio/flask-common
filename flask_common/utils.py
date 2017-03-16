@@ -1,31 +1,29 @@
+from __future__ import print_function
+
 import calendar
 import codecs
 import csv
-import cStringIO
+import io
 import datetime
-import dateutil.parser
 import itertools
 import math
-import pytz
 import re
 import signal
 import smtplib
 import sys
-import thread
 import threading
 import time
 import traceback
-import unidecode
-import StringIO
 
-from blist import sortedset
 from email.utils import formatdate
 from flask import current_app, request, Response
-from flask.ext.mail import Message
 from functools import wraps
 from logging.handlers import SMTPHandler
-from mongoengine import EmbeddedDocument
-from mongoengine.context_managers import query_counter
+try:
+    import mongoengine
+except ImportError:
+    mongoengine = None
+
 from smtplib import SMTPDataError
 from socket import gethostname
 
@@ -49,19 +47,24 @@ def json_list_generator(results):
             break
     yield ']'
 
-class isortedset(sortedset):
-    def __init__(self, *args, **kwargs):
-        if not kwargs.get('key'):
-            kwargs['key'] = lambda s: s.lower()
-        super(isortedset, self).__init__(*args, **kwargs)
+try:
+    from blist import sortedset
+except ImportError:
+    pass
+else:
+    class isortedset(sortedset):
+        def __init__(self, *args, **kwargs):
+            if not kwargs.get('key'):
+                kwargs['key'] = lambda s: s.lower()
+            super(isortedset, self).__init__(*args, **kwargs)
 
-    def __contains__(self, key):
-        if not self:
-            return False
-        try:
-            return self[self.bisect_left(key)].lower() == key.lower()
-        except IndexError:
-            return False
+        def __contains__(self, key):
+            if not self:
+                return False
+            try:
+                return self[self.bisect_left(key)].lower() == key.lower()
+            except IndexError:
+                return False
 
 class DetailedSMTPHandler(SMTPHandler):
     def __init__(self, app_name, *args, **kwargs):
@@ -149,7 +152,7 @@ class CsvWriter:
     """
     def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
         # Redirect output to a queue
-        self.queue = cStringIO.StringIO()
+        self.queue = io.StringIO()
         self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
         self.stream = f
         self.encoder = codecs.getincrementalencoder(encoding)()
@@ -244,6 +247,7 @@ def localtoday(tz_or_offset):
     Returns the local today date based on either a timezone object or on a UTC
     offset in hours.
     """
+    import pytz
     utc_now = datetime.datetime.utcnow()
     try:
         local_now = tz_or_offset.normalize(pytz.utc.localize(utc_now).astimezone(tz_or_offset))
@@ -256,6 +260,7 @@ def localtoday(tz_or_offset):
 def make_unaware(d):
     """ Converts an unaware datetime in UTC or an aware datetime to an unaware
     datetime in UTC. """
+    import pytz
 
     # "A datetime object d is aware if d.tzinfo is not None and
     # d.tzinfo.utcoffset(d) does not return None."
@@ -331,6 +336,7 @@ def parse_date_tz(date):
     Attempts to parse the date, taking common timezone offsets into account. An
     aware or unaware datetime is returned on success, otherwise None.
     """
+    import dateutil.parser
     try:
         return dateutil.parser.parse(date, tzinfos=_tz_info_dict)
     except (AttributeError, ValueError):
@@ -338,14 +344,15 @@ def parse_date_tz(date):
 
 
 def mail_admins(subject, body, recipients=None):
+    from flask_mail import Message
     if recipients == None:
         recipients = current_app.config['ADMINS']
     if not current_app.testing:
         if current_app.debug:
-            print 'Sending mail_admins:'
-            print 'Subject: {0}'.format(subject)
-            print
-            print body
+            print('Sending mail_admins:')
+            print('Subject: {0}'.format(subject))
+            print()
+            print(body)
         else:
             current_app.mail.send(Message(
                 subject,
@@ -383,6 +390,8 @@ def format_locals(exc_info):
     return force_unicode(message)
 
 def mail_exception(extra_subject=None, context=None, vars=True, subject=None, recipients=None):
+    from flask_mail import Message
+
     exc_info = sys.exc_info()
 
     if not subject:
@@ -411,10 +420,10 @@ def mail_exception(extra_subject=None, context=None, vars=True, subject=None, re
 
     if not current_app.testing:
         if current_app.debug:
-            print 'Sending mail_exception:'
-            print 'Subject: {0}'.format(subject)
-            print
-            print message
+            print('Sending mail_exception:')
+            print('Subject: {0}'.format(subject))
+            print()
+            print(message)
         else:
             msg = Message(subject, sender=current_app.config['SERVER_EMAIL'], recipients=recipients)
             msg.body = message
@@ -439,6 +448,7 @@ def force_unicode(s):
         return s.decode('latin1')
 
 def slugify(text, separator='_'):
+    import unidecode
     if isinstance(text, unicode):
         text = unidecode.unidecode(text)
     text = text.lower().strip()
@@ -495,62 +505,6 @@ class Timer(object):
             signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
 
-# Semaphore implementation from Python 3 which supports timeouts.
-class Semaphore(threading._Verbose):
-
-    # After Tim Peters' semaphore class, but not quite the same (no maximum)
-
-    def __init__(self, value=1, verbose=None):
-        if value < 0:
-            raise ValueError("semaphore initial value must be >= 0")
-        threading._Verbose.__init__(self, verbose)
-        self._cond = threading.Condition(threading.Lock())
-        self._value = value
-
-    def acquire(self, blocking=True, timeout=None):
-        if not blocking and timeout is not None:
-            raise ValueError("can't specify timeout for non-blocking acquire")
-        rc = False
-        endtime = None
-        self._cond.acquire()
-        while self._value == 0:
-            if not blocking:
-                break
-            if __debug__:
-                self._note("%s.acquire(%s): blocked waiting, value=%s",
-                           self, blocking, self._value)
-            if timeout is not None:
-                if endtime is None:
-                    endtime = threading._time() + timeout
-                else:
-                    timeout = endtime - threading._time()
-                    if timeout <= 0:
-                        break
-            self._cond.wait(timeout)
-        else:
-            self._value = self._value - 1
-            if __debug__:
-                self._note("%s.acquire: success, value=%s",
-                           self, self._value)
-            rc = True
-        self._cond.release()
-        return rc
-
-    __enter__ = acquire
-
-    def release(self):
-        self._cond.acquire()
-        self._value = self._value + 1
-        if __debug__:
-            self._note("%s.release: success, value=%s",
-                       self, self._value)
-        self._cond.notify()
-        self._cond.release()
-
-    def __exit__(self, t, v, tb):
-        self.release()
-
-
 class ThreadedTimer(object):
     """
     Timer class with an optional threaded timer. By default, interrupts the
@@ -562,6 +516,7 @@ class ThreadedTimer(object):
         self.on_timeout = on_timeout or self._timeout_handler
 
     def _timeout_handler(self):
+        import thread
         thread.interrupt_main()
 
     def __enter__(self):
@@ -603,7 +558,7 @@ def uniqify(seq, key=lambda i: i):
     result = []
     for x in seq:
         unique_key = key(x)
-        if isinstance(unique_key, EmbeddedDocument):
+        if mongoengine and isinstance(unique_key, mongoengine.EmbeddedDocument):
             unique_key = unique_key.to_dict()
         if isinstance(unique_key, dict):
             unique_key = hash(frozenset(unique_key.items()))
@@ -659,7 +614,7 @@ class Reader(object):
             one, two = value.split('=>', 1)
             return one.strip(), two.strip()
 
-        s = StringIO.StringIO(line)
+        s = io.StringIO(line)
         # http://stackoverflow.com/questions/6879596/why-is-the-python-csv-reader-ignoring-double-quoted-fields
         seq = [x.strip() for x in unicode_csv_reader(s, skipinitialspace=True).next()]
         if not seq:
@@ -697,59 +652,60 @@ def build_normalization_map(filename, case_sensitive=False):
     return dict(list(itertools.chain.from_iterable([[(token if case_sensitive else token.lower(), normalization.normalized_form) for token in normalization.tokens] for normalization in normalizations])))
 
 
-class custom_query_counter(query_counter):
-    """
-    Subclass of MongoEngine's query_counter context manager that also lets
-    you ignore some of the collections (just extend get_ignored_collections).
+if mongoengine:
+    class custom_query_counter(mongoengine.context_managers.query_counter):
+        """
+        Subclass of MongoEngine's query_counter context manager that also lets
+        you ignore some of the collections (just extend get_ignored_collections).
 
-    Initialize with custom_query_counter(verbose=True) for debugging.
-    """
+        Initialize with custom_query_counter(verbose=True) for debugging.
+        """
 
-    def __init__(self, verbose=False):
-        super(custom_query_counter, self).__init__()
-        self.verbose = verbose
+        def __init__(self, verbose=False):
+            super(custom_query_counter, self).__init__()
+            self.verbose = verbose
 
-    def get_ignored_collections(self):
-        return [
-            "{0}.system.indexes".format(self.db.name),
-            "{0}.system.namespaces".format(self.db.name),
-            "{0}.system.profile".format(self.db.name),
-            "{0}.$cmd".format(self.db.name),
-        ]
+        def get_ignored_collections(self):
+            return [
+                "{0}.system.indexes".format(self.db.name),
+                "{0}.system.namespaces".format(self.db.name),
+                "{0}.system.profile".format(self.db.name),
+                "{0}.$cmd".format(self.db.name),
+            ]
 
 
-    def _get_queries(self):
-        filter_query = { "$or": [
-            { "ns": {"$nin": self.get_ignored_collections()}, "op": { "$ne": "killcursors" } },
-            { "ns": "{0}.$cmd".format(self.db.name), "command.findAndModify": { "$exists": True } },
-        ]}
-        return self.db.system.profile.find(filter_query)
+        def _get_queries(self):
+            filter_query = { "$or": [
+                { "ns": {"$nin": self.get_ignored_collections()}, "op": { "$ne": "killcursors" } },
+                { "ns": "{0}.$cmd".format(self.db.name), "command.findAndModify": { "$exists": True } },
+            ]}
+            return self.db.system.profile.find(filter_query)
 
-    def _get_count(self):
-        """ Get the number of queries. """
-        queries = self._get_queries()
-        if self.verbose:
-            print '-'*80
-            for query in queries:
-                # findAndModify appear in $cmd -- we'll make them more readable
-                if query['ns'].endswith('.$cmd'):
-                    if 'findAndModify' in query['command']:
-                        ns = '.'.join([query['ns'].split('.')[0], query['command']['findAndModify']])
-                        op = 'findAndModify'
-                        query = query['command'].get('query')
+        def _get_count(self):
+            """ Get the number of queries. """
+            queries = self._get_queries()
+            if self.verbose:
+                print('-'*80)
+                for query in queries:
+                    # findAndModify appear in $cmd -- we'll make them more readable
+                    if query['ns'].endswith('.$cmd'):
+                        if 'findAndModify' in query['command']:
+                            ns = '.'.join([query['ns'].split('.')[0], query['command']['findAndModify']])
+                            op = 'findAndModify'
+                            query = query['command'].get('query')
+                        else:
+                            ns = query['ns']
+                            op = query['op']
+                            query = query['command']
                     else:
                         ns = query['ns']
                         op = query['op']
-                        query = query['command']
-                else:
-                    ns = query['ns']
-                    op = query['op']
-                    query = query.get('query')
-                print '{} [{}] {}'.format(ns, op, query)
-                print
-            print '-'*80
-        count = queries.count()
-        return count
+                        query = query.get('query')
+                    print('{} [{}] {}'.format(ns, op, query))
+                    print()
+                print('-'*80)
+            count = queries.count()
+            return count
 
 def truncate(text, size):
     """
