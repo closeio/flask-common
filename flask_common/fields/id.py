@@ -17,10 +17,14 @@ class IDField(UUIDField):
 
     IDs are prefixed with the prefix (given to the constructor), followed by an
     underscore, followed by the zbase62-encoded ID.
+
+    If autogenerate=True is passed to the constructor, a random ID is generated
+    and assigned to the field by default.
     """
     def __init__(self, **kwargs):
         self.prefix = kwargs.pop('prefix')
-        if 'default' not in kwargs:
+        self.autogenerate = kwargs.pop('autogenerate', False)
+        if self.autogenerate:
             kwargs['default'] = self.generate_id
         super(IDField, self).__init__(**kwargs)
 
