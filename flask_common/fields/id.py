@@ -25,6 +25,8 @@ class IDField(UUIDField):
         self.prefix = kwargs.pop('prefix')
         self.autogenerate = kwargs.pop('autogenerate', False)
         if self.autogenerate:
+            if 'default' in kwargs:
+                raise RuntimeError('Can\'t use "default" with "autogenerate"')
             kwargs['default'] = self.generate_id
         super(IDField, self).__init__(**kwargs)
 
