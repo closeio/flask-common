@@ -47,7 +47,7 @@ class Phone(db.Document):
 class Location(db.Document):
     timezone = TimezoneField()
 
-class TestTrimmedFields(db.Document):
+class TrimmedFields(db.Document):
     name = TrimmedStringField(required=True)
     comment = TrimmedStringField()
 
@@ -228,7 +228,7 @@ class FieldTestCase(unittest.TestCase):
         self.app = app.test_client()
         Phone.drop_collection()
         Location.drop_collection()
-        TestTrimmedFields.drop_collection()
+        TrimmedFields.drop_collection()
 
     def test_format_number(self):
         phone = Phone(phone='14151231234')
@@ -270,18 +270,18 @@ class FieldTestCase(unittest.TestCase):
         assert location.timezone == pytz.timezone('America/Los_Angeles')
 
     def test_trimmedstring_field(self):
-        test = TestTrimmedFields(name='')
+        test = TrimmedFields(name='')
         self.assertRaises(ValidationError, test.save)
 
-        test = TestTrimmedFields(name='  ')
+        test = TrimmedFields(name='  ')
         self.assertRaises(ValidationError, test.save)
 
-        test = TestTrimmedFields(name=' 1', comment='')
+        test = TrimmedFields(name=' 1', comment='')
         test.save()
         self.assertEqual(test.name, '1')
         self.assertEqual(test.comment, '')
 
-        test = TestTrimmedFields(name=' big name', comment=' this is a comment')
+        test = TrimmedFields(name=' big name', comment=' this is a comment')
         test.save()
         self.assertEqual(test.name, 'big name')
         self.assertEqual(test.comment, 'this is a comment')
