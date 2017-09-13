@@ -438,3 +438,18 @@ class ForbiddenQueriesQuerySet(QuerySet):
                 query_shape[key] = 1
         return query_shape
 
+
+def iter_no_cache(query_set):
+    """Iterate over queryset without caching it.
+
+    Useful for iterating over large result sets / bulk actions.
+
+    If a batch size is not set, apply a sensible default of 1000
+    that's better than what Mongo server is doing (101 first and
+    then as many as it can fit in 4MB) to avoid cursor timeouts.
+    """
+    if query_set._batch_size is None:
+        query_set = query_set.batch_size(1000)
+
+    while True:
+        yield query_set.next()
