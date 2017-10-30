@@ -13,12 +13,6 @@ try:
 except ImportError:
     pass
 
-# Sorted set fields
-try:
-    from .sorted_set import ISortedSetField, SortedSetField
-except ImportError:
-    pass
-
 # Timezone fields
 try:
     from .tz import TimezoneField

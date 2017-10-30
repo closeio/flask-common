@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import pytz
 import random
 import string
 import time
@@ -11,21 +10,25 @@ from dateutil.tz import tzutc
 from flask import Flask
 from mongoengine import connection, Document
 from mongoengine.errors import DoesNotExist
-from mongoengine.fields import ReferenceField, SafeReferenceField, \
-                               SafeReferenceListField, StringField, \
-                               IntField
+from mongoengine.fields import (ReferenceField, SafeReferenceField,
+                                SafeReferenceListField, StringField,
+                                IntField)
+import pytz
 from werkzeug.datastructures import MultiDict
 from wtforms import Form
 
-from flask.ext.mongoengine import MongoEngine, ValidationError
+from flask_mongoengine import MongoEngine, ValidationError
 from flask_common.crypto import aes_generate_key
 from flask_common.declenum import DeclEnum
 from flask_common.documents import fetch_related, iter_no_cache
-from flask_common.utils import apply_recursively, isortedset, slugify, custom_query_counter, uniqify
-from flask_common.fields import PhoneField, TimezoneField, TrimmedStringField, \
-                                EncryptedStringField, LowerStringField, LowerEmailField
+from flask_common.utils import (apply_recursively, slugify,
+                                custom_query_counter, uniqify)
+from flask_common.fields import (PhoneField, TimezoneField, TrimmedStringField,
+                                EncryptedStringField, LowerStringField,
+                                LowerEmailField)
 from flask_common.formfields import BetterDateTimeField
-from flask_common.documents import RandomPKDocument, DocumentBase, SoftDeleteDocument
+from flask_common.documents import (RandomPKDocument, DocumentBase,
+                                    SoftDeleteDocument)
 
 
 
@@ -418,25 +421,6 @@ class ApplyRecursivelyTestCase(unittest.TestCase):
             apply_recursively([{'a': 1, 'b': [2,3], 'c': { 'd': 4, 'e': None }}, 5], lambda n: n+1),
             [{'a': 2, 'b': [3,4], 'c': { 'd': 5, 'e': None }}, 6]
         )
-
-
-class ISortedSetTestCase(unittest.TestCase):
-    def test_isortedset(self):
-        s = isortedset(['Z', 'b', 'A'])
-        self.assertEqual(list(s), ['A', 'b', 'Z'])
-        self.assertTrue('a' in s)
-        self.assertTrue('A' in s)
-        self.assertTrue('b' in s)
-        self.assertTrue('B' in s)
-        self.assertTrue('z' in s)
-        self.assertTrue('Z' in s)
-        self.assertTrue('c' not in s)
-        self.assertTrue('C' not in s)
-
-        s = isortedset(['A', 'a'])
-        self.assertEqual(list(s), ['A'])
-        self.assertTrue('a' in s)
-        self.assertTrue('A' in s)
 
 
 class LowerFieldTestCase(unittest.TestCase):

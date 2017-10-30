@@ -50,24 +50,6 @@ def json_list_generator(results):
             break
     yield ']'
 
-try:
-    from blist import sortedset
-except ImportError:
-    pass
-else:
-    class isortedset(sortedset):
-        def __init__(self, *args, **kwargs):
-            if not kwargs.get('key'):
-                kwargs['key'] = lambda s: s.lower()
-            super(isortedset, self).__init__(*args, **kwargs)
-
-        def __contains__(self, key):
-            if not self:
-                return False
-            try:
-                return self[self.bisect_left(key)].lower() == key.lower()
-            except IndexError:
-                return False
 
 class DetailedSMTPHandler(SMTPHandler):
     def __init__(self, app_name, *args, **kwargs):
@@ -514,7 +496,7 @@ def uniqify(seq, key=lambda i: i):
 
     >>> uniqify([ { 'a': 1 }, { 'a': 2 }, { 'a': 1 } ])
     [ { 'a': 1 }, { 'a': 2 } ]
-    
+
     You can optionally specify a callable as the 'key' parameter which
     can extract or otherwise obtain a key from the items to use as the test for uniqueness.
 
