@@ -1,4 +1,3 @@
-
 def freeze(x):
     """Convert dicts and lists to frozensets of key/index, value pairs, recursively.
 
