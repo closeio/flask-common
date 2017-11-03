@@ -4,6 +4,9 @@ try:
 except ImportError:
     pass
 
+# List/iterator helpers
+from .lists import *
+
 # TODO: split these up
 try:
     from .legacy import *
