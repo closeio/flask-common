@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name='flask-common',
@@ -14,9 +14,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
     ],
-    packages=[
-        'flask_common',
-    ],
+    packages=find_packages(),
     test_suite='tests',
     tests_require=['python-dateutil', 'pytz', 'flask', 'mongoengine', 'pycrypto', 'padding', ]
 )
