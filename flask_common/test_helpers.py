@@ -1,5 +1,6 @@
 import re
 
+
 class SetCompare(object):
     """
     Comparator that doesn't take ordering into account. For example, the
@@ -12,6 +13,10 @@ class SetCompare(object):
 
     def __eq__(self, other):
         return set(other) == set(self.members)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class RegexSetCompare(object):
     """
@@ -31,6 +36,10 @@ class RegexSetCompare(object):
             return False
         return set(match.groups()) == set(self.args)
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class Capture(object):
     """
     Comparator that always returns True and returns the captured object when
@@ -47,16 +56,17 @@ class Capture(object):
         self.obj = other
         return True
 
+
 class DictCompare(dict):
     """
     Comparator that returns True if all the items in the comparator's dict are
     contained in the other dict and match values, ignoring keys that are in the
     other dict only.
 
-	For example, the following is true:
+    For example, the following is true:
     DictCompare({'a': 'b'}) == {'a': 'b', 'c': 'd'}
 
-	But the following are false:
+    But the following are false:
     DictCompare({'a': 'b'}) == {'a': 'c'}
     DictCompare({'a': 'b'}) == {'b': 'c'}
     """
@@ -65,3 +75,6 @@ class DictCompare(dict):
             if not k in other or other[k] != v:
                 return False
         return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
