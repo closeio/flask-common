@@ -15,7 +15,7 @@ class SetCompare(object):
         return set(other) == set(self.members)
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not self == other
 
 
 class RegexSetCompare(object):
@@ -37,7 +37,7 @@ class RegexSetCompare(object):
         return set(match.groups()) == set(self.args)
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not self == other
 
 
 class Capture(object):
@@ -77,4 +77,4 @@ class DictCompare(dict):
         return True
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not self == other
