@@ -46,3 +46,22 @@ class Capture(object):
     def __eq__(self, other):
         self.obj = other
         return True
+
+class DictCompare(dict):
+    """
+    Comparator that returns True if all the items in the comparator's dict are
+    contained in the other dict and match values, ignoring keys that are in the
+    other dict only.
+
+	For example, the following is true:
+    DictCompare({'a': 'b'}) == {'a': 'b', 'c': 'd'}
+
+	But the following are false:
+    DictCompare({'a': 'b'}) == {'a': 'c'}
+    DictCompare({'a': 'b'}) == {'b': 'c'}
+    """
+    def __eq__(self, other):
+        for k, v in self.items():
+            if not k in other or other[k] != v:
+                return False
+        return True
