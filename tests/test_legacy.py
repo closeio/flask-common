@@ -780,7 +780,7 @@ class DeclEnumTestCase(unittest.TestCase):
         assert TestEnum.from_string('alpha_value') == TestEnum.alpha
 
         db_type = TestEnum.db_type()
-        self.assertEqual(db_type.enum.values(), ['alpha_value', 'beta_value'])
+        self.assertEqual(set(db_type.enum.values()), set(['alpha_value', 'beta_value']))
 
 
 class IterNoCacheTestCase(unittest.TestCase):
@@ -820,4 +820,3 @@ class IterNoCacheTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
