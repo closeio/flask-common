@@ -17,5 +17,7 @@ setup(
     ],
     packages=find_packages(),
     test_suite='tests',
-    tests_require=['python-dateutil', 'pytz', 'flask', 'mongoengine', 'pycrypto', 'padding', 'pytest']
+    setup_requires=['pytest-runner'],
+    tests_require=['python-dateutil', 'pytz', 'flask', 'mongoengine',
+                   'pycrypto', 'padding', 'pytest']
 )
