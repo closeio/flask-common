@@ -19,7 +19,7 @@ def MongoReference(field, ref_cls):
         return getattr(obj, '_%s__cache' % field)
     def _set(obj, val):
         if hasattr(obj, '_%s__cache' % field):
-            delattr(obj, '_%s__cache')
+            delattr(obj, '_%s__cache' % field)
         if isinstance(val, ref_cls):
             val = val.pk
         if isinstance(val, ObjectId):
