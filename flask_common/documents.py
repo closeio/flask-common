@@ -133,7 +133,7 @@ class SoftDeleteDocument(Document):
     }
 
 
-def fetch_related(objs, field_dict, cache_map=None, extra_filters=None):
+def fetch_related(objs, field_dict, cache_map=None, extra_filters={}):
     """
     Recursively fetches related objects for the given document instances.
     Sample usage:
