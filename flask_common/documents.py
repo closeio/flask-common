@@ -133,7 +133,7 @@ class SoftDeleteDocument(Document):
     }
 
 
-def fetch_related(objs, field_dict, cache_map=None):
+def fetch_related(objs, field_dict, cache_map=None, extra_filters=None):
     """
     Recursively fetches related objects for the given document instances.
     Sample usage:
@@ -169,6 +169,13 @@ def fetch_related(objs, field_dict, cache_map=None):
     call. This way we ensure that the same objects aren't fetched more than
     once across multiple fetch_related calls. Cache map has a form of:
     { DocumentClass: { id_of_fetched_obj: obj, id_of_fetched_obj2: obj2 } }.
+
+    The function takes an optional dict extra_filters in the form
+    {document_class: filters} which will be passed as filters to the QuerySet.
+    This can be useful to pass a shard key filter. For example, if the Contact
+    model uses organization_id as a shard key, and all contacts are expected to
+    be in the same organization, you can pass:
+    {Contact: {'organization_id': organization.pk}}
     """
 
     if not objs:
@@ -288,7 +295,9 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     # Fetch objects and cache them
     for document_class, fetch_opts in fetch_map.iteritems():
-        qs = document_class.objects.filter(pk__in=fetch_opts['ids']).clear_initial_query()
+        cls_filters = extra_filters.get(document_class, {})
+        qs = document_class.objects.filter(
+            pk__in=fetch_opts['ids'], **cls_filters).clear_initial_query()
 
         # only fetch the requested fields
         if fetch_opts['fields_to_fetch']:
@@ -296,7 +305,7 @@ def fetch_related(objs, field_dict, cache_map=None):
 
         # update the cache map - either the persistent one with full objects,
         # or the ephemeral partial cache
-        update_dict = { obj.pk: obj for obj in qs }
+        update_dict = {obj.pk: obj for obj in qs}
         if fetch_opts['fields_to_fetch'] is None:
             cache_map[document_class].update(update_dict)
         else:
