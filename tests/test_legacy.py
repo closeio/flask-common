@@ -753,6 +753,42 @@ class FetchRelatedTestCase(unittest.TestCase):
                 [self.a1.pk, self.a3.pk]
             )
 
+    def test_batch_size_1(self):
+        """
+        Ensure we batch requests properly, if a batch size is given.
+        """
+        objs = list(self.B.objects.all())
+
+        with custom_query_counter() as q:
+            fetch_related(objs, {
+                'ref': True,
+            }, batch_size=2)
+
+            # make sure A objs are fetched
+            for obj in objs:
+                self.assertTrue(obj.ref.txt in ('a1', 'a2', 'a3'))
+
+            # We need two queries to fetch 3 objects.
+            self.assertEqual(q, 2)
+
+    def test_batch_size_2(self):
+        """
+        Ensure we batch requests properly, if a batch size is given.
+        """
+        objs = list(self.B.objects.all())
+
+        with custom_query_counter() as q:
+            fetch_related(objs, {
+                'ref': True,
+            }, batch_size=3)
+
+            # make sure A objs are fetched
+            for obj in objs:
+                self.assertTrue(obj.ref.txt in ('a1', 'a2', 'a3'))
+
+            # All 3 objects are fetched in one query.
+            self.assertEqual(q, 1)
+
 
 class UtilsTestCase(unittest.TestCase):
 
