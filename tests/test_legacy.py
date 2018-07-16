@@ -748,7 +748,8 @@ class FetchRelatedTestCase(unittest.TestCase):
 
             self.assertEqual(q, 2)
             self.assertEqual(
-                [op['query']['_id']['$in'][0] for op in q.db.system.profile.find({ 'op': 'query' })],
+                [op['query']['filter']['_id']['$in'][0]
+                    for op in q.db.system.profile.find({'op': 'query'})],
                 [self.a1.pk, self.a3.pk]
             )
 
