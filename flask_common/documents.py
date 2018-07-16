@@ -139,7 +139,8 @@ class SoftDeleteDocument(Document):
     }
 
 
-def fetch_related(objs, field_dict, cache_map=None, extra_filters={}):
+def fetch_related(objs, field_dict, cache_map=None, extra_filters={},
+                  batch_size=100):
     """
     Recursively fetches related objects for the given document instances.
     Sample usage:
@@ -311,20 +312,27 @@ def fetch_related(objs, field_dict, cache_map=None, extra_filters={}):
     for document_class, fetch_opts in fetch_map.iteritems():
         cls_filters = extra_filters.get(document_class, {})
 
-        qs = document_class.objects.filter(
-            pk__in=fetch_opts['ids'], **cls_filters).clear_initial_query()
+        # Fetch objects in batches. Also set the batch size so we don't do
+        # multiple queries per batch.
+        for id_group in grouper(batch_size, list(fetch_opts['ids'])):
+            qs = (document_class.objects.filter(pk__in=id_group, **cls_filters)
+                                        #.batch_size(batch_size)
+                                        .clear_initial_query())
 
-        # only fetch the requested fields
-        if fetch_opts['fields_to_fetch']:
-            qs = qs.only(*fetch_opts['fields_to_fetch'])
+            # only fetch the requested fields
+            if fetch_opts['fields_to_fetch']:
+                qs = qs.only(*fetch_opts['fields_to_fetch'])
 
-        # update the cache map - either the persistent one with full objects,
-        # or the ephemeral partial cache
-        update_dict = {obj.pk: obj for obj in qs}
-        if fetch_opts['fields_to_fetch'] is None:
-            cache_map[document_class].update(update_dict)
-        else:
-            partial_cache_map[document_class].update(update_dict)
+            # We have to apply this at the end, or only() won't work.
+            qs = qs.batch_size(batch_size)
+
+            # update the cache map - either the persistent one with full
+            # objects, or the ephemeral partial cache
+            update_dict = {obj.pk: obj for obj in qs}
+            if fetch_opts['fields_to_fetch'] is None:
+                cache_map[document_class].update(update_dict)
+            else:
+                partial_cache_map[document_class].update(update_dict)
 
     # Assign objects
     for field_name, sub_field_dict in field_dict.iteritems():
