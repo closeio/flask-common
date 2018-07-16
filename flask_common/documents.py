@@ -316,7 +316,6 @@ def fetch_related(objs, field_dict, cache_map=None, extra_filters={},
         # multiple queries per batch.
         for id_group in grouper(batch_size, list(fetch_opts['ids'])):
             qs = (document_class.objects.filter(pk__in=id_group, **cls_filters)
-                                        #.batch_size(batch_size)
                                         .clear_initial_query())
 
             # only fetch the requested fields
