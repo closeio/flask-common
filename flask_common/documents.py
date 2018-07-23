@@ -6,11 +6,15 @@ from mongoengine import *
 from mongoengine.queryset import OperationError
 from mongoengine.errors import ValidationError
 
+from .utils.lists import grouper
+
+
 class StringIdField(StringField):
     def to_mongo(self, value):
         if not isinstance(value, basestring):
             raise ValidationError(errors={self.name: ['StringIdField only accepts string values.']})
         return super(StringIdField, self).to_mongo(value)
+
 
 class RandomPKDocument(Document):
     id = StringIdField(primary_key=True)
@@ -37,7 +41,7 @@ class RandomPKDocument(Document):
                 kwargs['force_insert'] = True
 
                 # But don't do that when cascading.
-                kwargs['cascade_kwargs'] = { 'force_insert': False }
+                kwargs['cascade_kwargs'] = {'force_insert': False}
 
             return super(RandomPKDocument, self).save(*args, **kwargs)
         except OperationError, err:
@@ -54,6 +58,7 @@ class RandomPKDocument(Document):
     meta = {
         'abstract': True,
     }
+
 
 class DocumentBase(Document):
     date_created = DateTimeField(required=True)
@@ -102,6 +107,7 @@ class NotDeletedQuerySet(QuerySet):
             self = self.all()
         return super(NotDeletedQuerySet, self).count(*args, **kwargs)
 
+
 class SoftDeleteDocument(Document):
     is_deleted = BooleanField(default=False, required=True)
 
@@ -133,7 +139,8 @@ class SoftDeleteDocument(Document):
     }
 
 
-def fetch_related(objs, field_dict, cache_map=None):
+def fetch_related(objs, field_dict, cache_map=None, extra_filters={},
+                  batch_size=100):
     """
     Recursively fetches related objects for the given document instances.
     Sample usage:
@@ -169,6 +176,13 @@ def fetch_related(objs, field_dict, cache_map=None):
     call. This way we ensure that the same objects aren't fetched more than
     once across multiple fetch_related calls. Cache map has a form of:
     { DocumentClass: { id_of_fetched_obj: obj, id_of_fetched_obj2: obj2 } }.
+
+    The function takes an optional dict extra_filters in the form
+    {document_class: filters} which will be passed as filters to the QuerySet.
+    This can be useful to pass a shard key filter. For example, if the Contact
+    model uses organization_id as a shard key, and all contacts are expected to
+    be in the same organization, you can pass:
+    {Contact: {'organization_id': organization.pk}}
     """
 
     if not objs:
@@ -177,7 +191,7 @@ def fetch_related(objs, field_dict, cache_map=None):
     # Cache map holds a map of pks to objs for objects we fetched, over all
     # iterations / from previous calls, by document class (doesn't include
     # partially fetched objects)
-    if cache_map == None:
+    if cache_map is None:
         cache_map = {}
 
     # Cache map for partial fetches (i.e. ones where only specific fields
@@ -226,14 +240,15 @@ def fetch_related(objs, field_dict, cache_map=None):
     instances = get_instance_for_each_type(objs)
     for field_name, sub_field_dict in field_dict.iteritems():
 
-        instance = [instance for instance in instances if instance and field_name in instance.__class__._fields]
+        instance = [instance for instance in instances
+                    if instance and field_name in instance.__class__._fields]
         if not instance:
             continue  # None of the objects contains this field
 
         instance = instance[0]
         field = instance.__class__._fields[field_name]
         db_field = instance._db_field_map.get(field_name, field_name)
-        if isinstance(field, ReferenceField): # includes SafeReferenceListField
+        if isinstance(field, ReferenceField):  # includes SafeReferenceListField
             document_class = field.document_type
         elif isinstance(field, SafeReferenceListField):
             document_class = field.field.document_type
@@ -248,14 +263,21 @@ def fetch_related(objs, field_dict, cache_map=None):
         if not field:
             continue
 
-        # we need to use _db_data for safe references because touching their pks triggers a query
+        # we need to use _db_data for safe references because touching their
+        # pks triggers a query
         if isinstance(field, SafeReferenceField):
-            ids = { id_from_value(field, obj._db_data.get(db_field, None)) for obj in objs if field_name not in obj._internal_data and obj._db_data.get(db_field, None) }
+            ids = {id_from_value(field, obj._db_data.get(db_field, None))
+                   for obj in objs if field_name not in obj._internal_data and
+                   obj._db_data.get(db_field, None)}
         elif isinstance(field, SafeReferenceListField):
-            ids = [ obj._db_data.get(db_field, []) for obj in objs if field_name not in obj._internal_data ]
-            ids = { id_from_value(field.field, item) for sublist in ids for item in sublist } # flatten the list of lists
+            ids = [obj._db_data.get(db_field, []) for obj in objs
+                   if field_name not in obj._internal_data]
+            ids = {id_from_value(field.field, item)
+                   for sublist in ids for item in sublist}  # flatten the list of lists
         elif isinstance(field, ReferenceField):
-            ids = { getattr(obj, field_name).pk for obj in objs if getattr(obj, field_name, None) and getattr(getattr(obj, field_name), '_lazy', False) }
+            ids = {getattr(obj, field_name).pk for obj in objs
+                   if getattr(obj, field_name, None) and
+                   getattr(getattr(obj, field_name), '_lazy', False)}
 
         # remove ids of objects that are already in the cache map
         if document_class in cache_map:
@@ -278,7 +300,7 @@ def fetch_related(objs, field_dict, cache_map=None):
             # make sure we don't allow partial fetching if the same document class
             # has conflicting fields_to_fetch (e.g. { user: ["id"], created_by: True })
             # TODO this could be improved to fetch a union of all requested fields
-            if fields_to_fetch !=  fetch_map[document_class]['fields_to_fetch']:
+            if fields_to_fetch != fetch_map[document_class]['fields_to_fetch']:
                 raise RuntimeError('Cannot specify different fields_to_fetch for the same document class %s' % document_class)
         else:
             fetch_map[document_class] = {
@@ -288,19 +310,28 @@ def fetch_related(objs, field_dict, cache_map=None):
 
     # Fetch objects and cache them
     for document_class, fetch_opts in fetch_map.iteritems():
-        qs = document_class.objects.filter(pk__in=fetch_opts['ids']).clear_initial_query()
+        cls_filters = extra_filters.get(document_class, {})
 
-        # only fetch the requested fields
-        if fetch_opts['fields_to_fetch']:
-            qs = qs.only(*fetch_opts['fields_to_fetch'])
+        # Fetch objects in batches. Also set the batch size so we don't do
+        # multiple queries per batch.
+        for id_group in grouper(batch_size, list(fetch_opts['ids'])):
+            qs = (document_class.objects.filter(pk__in=id_group, **cls_filters)
+                                        .clear_initial_query())
 
-        # update the cache map - either the persistent one with full objects,
-        # or the ephemeral partial cache
-        update_dict = { obj.pk: obj for obj in qs }
-        if fetch_opts['fields_to_fetch'] is None:
-            cache_map[document_class].update(update_dict)
-        else:
-            partial_cache_map[document_class].update(update_dict)
+            # only fetch the requested fields
+            if fetch_opts['fields_to_fetch']:
+                qs = qs.only(*fetch_opts['fields_to_fetch'])
+
+            # We have to apply this at the end, or only() won't work.
+            qs = qs.batch_size(batch_size)
+
+            # update the cache map - either the persistent one with full
+            # objects, or the ephemeral partial cache
+            update_dict = {obj.pk: obj for obj in qs}
+            if fetch_opts['fields_to_fetch'] is None:
+                cache_map[document_class].update(update_dict)
+            else:
+                partial_cache_map[document_class].update(update_dict)
 
     # Assign objects
     for field_name, sub_field_dict in field_dict.iteritems():
@@ -323,8 +354,11 @@ def fetch_related(objs, field_dict, cache_map=None):
                 if field_name not in obj._internal_data:
                     val = obj._db_data.get(db_field, None)
                     if val:
-                        setattr_unchanged(obj, field_name,
-                                pk_to_obj.get(id_from_value(field, val)))
+                        setattr_unchanged(
+                            obj,
+                            field_name,
+                            pk_to_obj.get(id_from_value(field, val))
+                        )
 
             elif isinstance(field, ReferenceField):
                 val = getattr(obj, field_name, None)
@@ -336,12 +370,13 @@ def fetch_related(objs, field_dict, cache_map=None):
             elif isinstance(field, SafeReferenceListField):
                 if field_name not in obj._internal_data:
                     value = filter(None, [pk_to_obj.get(id_from_value(field.field, val))
-                            for val in obj._db_data.get(db_field, [])])
+                                          for val in obj._db_data.get(db_field, [])])
                     setattr_unchanged(obj, field_name, value)
 
 
 class ForbiddenQueryException(Exception):
     """Exception raised by ForbiddenQueriesQuerySet"""
+
 
 class ForbiddenQueriesQuerySet(QuerySet):
     """

@@ -505,24 +505,33 @@ class FetchRelatedTestCase(unittest.TestCase):
     def setUp(self):
         super(FetchRelatedTestCase, self).setUp()
 
+        class Shard(db.Document):
+            pass
+
         class A(db.Document):
+            shard_a = ReferenceField(Shard)
             txt = StringField()
 
         class B(db.Document):
+            shard_b = ReferenceField(Shard)
             ref = ReferenceField(A)
 
         class C(db.Document):
+            shard_c = ReferenceField(Shard)
             ref_a = ReferenceField(A)
 
         class D(db.Document):
+            shard_d = ReferenceField(Shard)
             ref_c = ReferenceField(C)
             ref_a = ReferenceField(A)
 
         class E(db.Document):
+            shard_e = ReferenceField(Shard)
             refs_a = SafeReferenceListField(ReferenceField(A))
             ref_b = SafeReferenceField(B)
 
         class F(db.Document):
+            shard_f = ReferenceField(Shard)
             ref_a = ReferenceField(A)
 
         A.drop_collection()
@@ -532,6 +541,7 @@ class FetchRelatedTestCase(unittest.TestCase):
         E.drop_collection()
         F.drop_collection()
 
+        self.Shard = Shard
         self.A = A
         self.B = B
         self.C = C
@@ -539,18 +549,24 @@ class FetchRelatedTestCase(unittest.TestCase):
         self.E = E
         self.F = F
 
-        self.a1 = A.objects.create(txt='a1')
-        self.a2 = A.objects.create(txt='a2')
-        self.a3 = A.objects.create(txt='a3')
-        self.b1 = B.objects.create(ref=self.a1)
-        self.b2 = B.objects.create(ref=self.a2)
-        self.c1 = C.objects.create(ref_a=self.a3)
-        self.d1 = D.objects.create(ref_c=self.c1, ref_a=self.a3)
+        self.shard = Shard.objects.create()
+        self.a1 = A.objects.create(shard_a=self.shard, txt='a1')
+        self.a2 = A.objects.create(shard_a=self.shard, txt='a2')
+        self.a3 = A.objects.create(shard_a=self.shard, txt='a3')
+        self.b1 = B.objects.create(shard_b=self.shard, ref=self.a1)
+        self.b2 = B.objects.create(shard_b=self.shard, ref=self.a2)
+        self.c1 = C.objects.create(shard_c=self.shard, ref_a=self.a3)
+        self.d1 = D.objects.create(
+            shard_d=self.shard,
+            ref_c=self.c1,
+            ref_a=self.a3
+        )
         self.e1 = E.objects.create(
+            shard_e=self.shard,
             refs_a=[self.a1, self.a2, self.a3],
             ref_b=self.b1
         )
-        self.f1 = F.objects.create(ref_a=None)  # empty ref
+        self.f1 = F.objects.create(shard_f=self.shard, ref_a=None)  # empty ref
 
     def test_fetch_related(self):
         with custom_query_counter() as q:
@@ -748,9 +764,66 @@ class FetchRelatedTestCase(unittest.TestCase):
 
             self.assertEqual(q, 2)
             self.assertEqual(
-                [op['query']['_id']['$in'][0] for op in q.db.system.profile.find({ 'op': 'query' })],
+                [op['query']['filter']['_id']['$in'][0]
+                    for op in q.db.system.profile.find({'op': 'query'})],
                 [self.a1.pk, self.a3.pk]
             )
+
+    def test_extra_filters(self):
+        """
+        Ensure we apply extra filters by collection.
+        """
+        objs = list(self.E.objects.all())
+
+        with custom_query_counter() as q:
+            fetch_related(objs, {
+                'refs_a': True,
+                'ref_b': True,
+            }, extra_filters={
+                self.A: {'shard_a': self.shard},
+                self.B: {'shard_b': self.shard},
+            })
+        ops = list(q.db.system.profile.find({'op': 'query'}))
+        assert len(ops) == 2
+        filters = {op['query']['find']: op['query']['filter'] for op in ops}
+        assert filters['a']['shard_a'] == self.shard.pk
+        assert filters['b']['shard_b'] == self.shard.pk
+
+    def test_batch_size_1(self):
+        """
+        Ensure we batch requests properly, if a batch size is given.
+        """
+        objs = list(self.B.objects.all())
+
+        with custom_query_counter() as q:
+            fetch_related(objs, {
+                'ref': True,
+            }, batch_size=2)
+
+            # make sure A objs are fetched
+            for obj in objs:
+                self.assertTrue(obj.ref.txt in ('a1', 'a2', 'a3'))
+
+            # We need two queries to fetch 3 objects.
+            self.assertEqual(q, 2)
+
+    def test_batch_size_2(self):
+        """
+        Ensure we batch requests properly, if a batch size is given.
+        """
+        objs = list(self.B.objects.all())
+
+        with custom_query_counter() as q:
+            fetch_related(objs, {
+                'ref': True,
+            }, batch_size=3)
+
+            # make sure A objs are fetched
+            for obj in objs:
+                self.assertTrue(obj.ref.txt in ('a1', 'a2', 'a3'))
+
+            # All 3 objects are fetched in one query.
+            self.assertEqual(q, 1)
 
 
 class UtilsTestCase(unittest.TestCase):
