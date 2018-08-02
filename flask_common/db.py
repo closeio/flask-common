@@ -7,15 +7,23 @@ from sqlalchemy.orm import relationship, synonym
 
 __all__ = ['MongoReference', 'MongoEmbedded', 'MongoEmbeddedList', 'Base', 'UserBase']
 
-def MongoReference(field, ref_cls):
+def MongoReference(field, ref_cls, queryset_attr='objects'):
     """
-    Reference to a MongoDB table. The value is cached until an assignment is
-    made.
+    Reference to a MongoDB document.
+
+    The value is cached until an assignment is made.
+
+    If the Document class (`ref_cls`) implements a custom queryset manager,
+    you can switch to it (instead of the default `Document.objects`) using
+    the `queryset_attr`.
     """
     def _get(obj):
         if not hasattr(obj, '_%s__cache' % field):
-            setattr(obj, '_%s__cache' % field,
-                ref_cls.objects.get(pk=getattr(obj, field)))
+            qs= getattr(ref_cls, queryset_attr)
+            setattr(
+                obj, '_%s__cache' % field,
+                qs.get(pk=getattr(obj, field))
+            )
         return getattr(obj, '_%s__cache' % field)
     def _set(obj, val):
         if hasattr(obj, '_%s__cache' % field):
