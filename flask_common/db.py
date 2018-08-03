@@ -7,16 +7,26 @@ from sqlalchemy.orm import relationship, synonym
 
 __all__ = ['MongoReference', 'MongoEmbedded', 'MongoEmbeddedList', 'Base', 'UserBase']
 
-def MongoReference(field, ref_cls):
+def MongoReference(field, ref_cls, queryset=None):
     """
-    Reference to a MongoDB table. The value is cached until an assignment is
-    made.
+    Reference to a MongoDB document.
+
+    The value is cached until an assignment is made.
+
+    To use a custom queryset (instead of the default `ref_cls.objects`),
+    pass it as the `queryset` kwarg.
     """
+    if queryset is None:
+        queryset = ref_cls.objects
+
     def _get(obj):
         if not hasattr(obj, '_%s__cache' % field):
-            setattr(obj, '_%s__cache' % field,
-                ref_cls.objects.get(pk=getattr(obj, field)))
+            setattr(
+                obj, '_%s__cache' % field,
+                queryset.get(pk=getattr(obj, field))
+            )
         return getattr(obj, '_%s__cache' % field)
+
     def _set(obj, val):
         if hasattr(obj, '_%s__cache' % field):
             delattr(obj, '_%s__cache' % field)
@@ -25,6 +35,7 @@ def MongoReference(field, ref_cls):
         if isinstance(val, ObjectId):
             val = str(val)
         setattr(obj, field, val)
+
     return synonym(field, descriptor=property(_get, _set))
 
 def MongoEmbedded(field, emb_cls):
