@@ -13,13 +13,23 @@ class Enum(object):
     is prone to typos.
     """
 
+    # Cached values and choices to avoid introspection on every call.
+    __values = []
+    __choices = []
+
     @classmethod
     def values(cls):
         """
         Returns a list of all the values, e.g.: ('choice1', 'choice2')
         """
-        return [getattr(cls,v) for v in dir(cls)
-                if not callable(getattr(cls,v)) and not v.startswith('_')]
+        if not cls.__values:
+            cls.__values = [
+                getattr(cls,v)
+                for v in dir(cls)
+                if not callable(getattr(cls,v)) and not v.startswith('_')
+            ]
+
+        return cls.__values
 
     @classmethod
     def choices(cls):
@@ -27,5 +37,11 @@ class Enum(object):
         Returns a list of choice tuples, e.g.:
         [('value1', 'Choice1'), ('value2', 'Choice2')]
         """
-        return [(getattr(cls,v), v) for v in dir(cls)
-                if not callable(getattr(cls,v)) and not v.startswith('_')]
+        if not cls.__choices:
+            cls.__choices = [
+                (getattr(cls,v), v)
+                for v in dir(cls)
+                if not callable(getattr(cls,v)) and not v.startswith('_')
+            ]
+
+        return cls.__choices
