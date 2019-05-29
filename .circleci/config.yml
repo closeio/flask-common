@@ -15,10 +15,12 @@ defaults: &defaults
   - checkout
   - run:
       name: Install dependencies
-      command: pipenv install -r requirements.txt pytest
+      command: |
+        GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" \
+          sudo -E pip install -r requirements.txt pytest
   - run:
       name: Test
-      command: pipenv run pytest
+      command: PYTHONPATH=. pytest tests
 
 jobs:
   test-2.7:
