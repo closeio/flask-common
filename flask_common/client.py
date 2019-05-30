@@ -1,7 +1,7 @@
 import base64
 import json
 
-from flask import current_app
+from flask import current_app, g
 from flask.testing import FlaskClient
 from werkzeug.datastructures import Headers
 
@@ -49,7 +49,8 @@ class ApiClient(Client):
             kwargs['headers'] = self.get_headers(api_key)
         return super(ApiClient, self).open(*args, **kwargs)
 
-def local_request(view, method='GET', data=None, view_args=None, user=None, api_key=None):
+def local_request(view, method='GET', data=None, view_args=None, user=None,
+                  api_key=None, meta=None):
     """
     Performs a request to the current application's view without the network
     overhead and without request pre and postprocessing. Returns a tuple
@@ -82,6 +83,8 @@ def local_request(view, method='GET', data=None, view_args=None, user=None, api_
         ctx.request.args = data
     elif data:
         ctx.request.data = json.dumps(data)
+    if meta is not None:
+        ctx.g.meta = meta
     ctx.push()
 
     try:
