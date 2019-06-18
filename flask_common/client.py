@@ -1,7 +1,7 @@
 import base64
 import json
 
-from flask import current_app, g
+from flask import current_app
 from flask.testing import FlaskClient
 from werkzeug.datastructures import Headers
 
@@ -78,13 +78,13 @@ def local_request(view, method='GET', data=None, view_args=None, user=None,
     ctx.request.environ['REQUEST_METHOD'] = method  # we can't directly manipulate request.method (it's immutable)
     ctx.user = user
     if api_key is not None:
-        ctx.g.api_key = api_key
+        ctx.request_g.api_key = api_key
     if data and method == 'GET':
         ctx.request.args = data
     elif data:
         ctx.request.data = json.dumps(data)
     if meta is not None:
-        ctx.g.meta = meta
+        ctx.reqeust_g.meta = meta
     ctx.push()
 
     try:
