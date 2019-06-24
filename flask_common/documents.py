@@ -44,7 +44,7 @@ class RandomPKDocument(Document):
                 kwargs['cascade_kwargs'] = {'force_insert': False}
 
             return super(RandomPKDocument, self).save(*args, **kwargs)
-        except OperationError, err:
+        except OperationError as err:
             self.id = old_id
 
             # Use "startswith" instead of "in". Otherwise, if a free form
