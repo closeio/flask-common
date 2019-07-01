@@ -7,9 +7,10 @@ from sqlalchemy.orm import relationship, synonym
 
 __all__ = ['MongoReference', 'MongoEmbedded', 'MongoEmbeddedList', 'Base', 'UserBase']
 
+
 def MongoReference(field, ref_cls, queryset=None):
     """
-    Reference to a MongoDB document.
+    SQLA field that represents a reference to a MongoEngine document.
 
     The value is cached until an assignment is made.
 
@@ -45,8 +46,11 @@ def MongoReference(field, ref_cls, queryset=None):
 
     return synonym(field, descriptor=property(_get, _set))
 
+
 def MongoEmbedded(field, emb_cls):
     """
+    SQLA field that represents a MongoEngine embedded document.
+
     Converts the JSON value to/from an EmbeddedDocument. Note that a new
     instance is returned every time we access and we must reassign any changes
     back to the model.
@@ -57,12 +61,15 @@ def MongoEmbedded(field, emb_cls):
         setattr(obj, field, val.to_mongo())
     return synonym(field, descriptor=property(_get, _set))
 
+
 def MongoEmbeddedList(field, emb_cls):
+    """SQLA field that represents a list of MongoEngine embedded documents."""
     def _get(obj):
         return [emb_cls._from_son(item) for item in getattr(obj, field)]
     def _set(obj, val):
         setattr(obj, field, [item.to_mongo() for item in val])
     return synonym(field, descriptor=property(_get, _set))
+
 
 # From https://code.launchpad.net/~stefanor/ibid/sqlalchemy-0.6-trunk/+merge/66033
 class PGSQLModeListener(object):
@@ -70,6 +77,7 @@ class PGSQLModeListener(object):
         c = dbapi_con.cursor()
         c.execute("SET TIME ZONE UTC")
         c.close()
+
 
 class Base(object):
     id = db.Column(UUID, default=lambda: str(uuid.uuid4()), primary_key=True)
@@ -83,6 +91,7 @@ class Base(object):
     __mapper_args__ = {
         'order_by': db.desc('updated_at')
     }
+
 
 class UserBase(Base):
     created_by_id = declared_attr(lambda cls: db.Column(UUID, db.ForeignKey('user.id'), default=cls._get_current_user))
