@@ -26,3 +26,12 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
