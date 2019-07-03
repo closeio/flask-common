@@ -2,7 +2,7 @@ import uuid
 
 from mongoengine import UUIDField
 
-from ..utils.id import id_to_uuid, uuid_to_id
+from flask_common.utils.id import id_to_uuid, uuid_to_id
 
 
 try:

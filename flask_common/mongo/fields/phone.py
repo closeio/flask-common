@@ -1,7 +1,7 @@
 import re
 
-from mongoengine.fields import StringField
 import phonenumbers
+from mongoengine.fields import StringField
 
 
 class PhoneField(StringField):
