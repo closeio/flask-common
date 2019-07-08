@@ -1,7 +1,7 @@
 import base64
 import json
 
-from flask import current_app, g
+from flask import current_app
 from flask.testing import FlaskClient
 from werkzeug.datastructures import Headers
 
@@ -111,7 +111,7 @@ def local_request(
     try:
         resp = view.dispatch_request(**view_args)
         json_data = json.loads(resp.data)
-    except Exception as e:
+    except Exception:
         ctx.pop()
         raise
     else:
