@@ -9,5 +9,4 @@ pycrypto==2.6.1
 padding==0.4
 Unidecode==0.4.19
 -e git+ssh://git@github.com/closeio/zbase62.git@e13d2c748ccdb0cafe6465961a0c6a4111ee219f#egg=zbase62
-flask-mail==0.9.1
 pymongo==3.4.0

@@ -30,8 +30,6 @@ try:
         json_list_generator,
         lazylist,
         localtoday,
-        mail_admins,
-        mail_exception,
         make_unaware,
         parse_date_tz,
         returns_xml,

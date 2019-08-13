@@ -10,10 +10,8 @@ import math
 import re
 import signal
 import smtplib
-import sys
 import threading
 import time
-import traceback
 
 from email.utils import formatdate
 from flask import current_app, request, Response
@@ -25,7 +23,6 @@ try:
 except ImportError:
     mongoengine = None
 
-from smtplib import SMTPDataError
 from socket import gethostname
 
 
@@ -328,28 +325,6 @@ def parse_date_tz(date):
         return
 
 
-def mail_admins(subject, body, recipients=None):
-    from flask_mail import Message
-
-    if recipients is None:
-        recipients = current_app.config['ADMINS']
-    if not current_app.testing:
-        if current_app.debug:
-            print('Sending mail_admins:')
-            print('Subject: {0}'.format(subject))
-            print()
-            print(body)
-        else:
-            current_app.mail.send(
-                Message(
-                    subject,
-                    sender=current_app.config['SERVER_EMAIL'],
-                    recipients=recipients,
-                    body=body,
-                )
-            )
-
-
 def format_locals(exc_info):
     tb = exc_info[2]
     stack = []
@@ -379,75 +354,6 @@ def format_locals(exc_info):
                 message += "<ERROR WHILE PRINTING VALUE>\n"
 
     return force_unicode(message)
-
-
-def mail_exception(
-    extra_subject=None, context=None, vars=True, subject=None, recipients=None
-):
-    from flask_mail import Message
-
-    exc_info = sys.exc_info()
-
-    if not subject:
-        subject = "[%s] %s%s %s on %s" % (
-            request.host,
-            extra_subject and '%s: ' % extra_subject or '',
-            request.path,
-            exc_info[1].__class__.__name__,
-            gethostname(),
-        )
-
-    message_context = ''
-    message_vars = ''
-
-    if context:
-        message_context += 'Context:\n\n'
-        try:
-            message_context += '\n'.join(
-                ['%s: %s' % (k, context[k]) for k in sorted(context.keys())]
-            )
-        except:
-            message_context += 'Error reporting context.'
-        message_context += '\n\n\n\n'
-
-    if vars:
-        message_vars += format_locals(exc_info)
-        message_vars += '\n\n\n'
-
-    message_tb = '\n'.join(traceback.format_exception(*exc_info))
-
-    message = ''.join([message_context, message_vars, message_tb])
-
-    recipients = recipients if recipients else current_app.config['ADMINS']
-
-    if not current_app.testing:
-        if current_app.debug:
-            print('Sending mail_exception:')
-            print('Subject: {0}'.format(subject))
-            print()
-            print(message)
-        else:
-            msg = Message(
-                subject,
-                sender=current_app.config['SERVER_EMAIL'],
-                recipients=recipients,
-            )
-            msg.body = message
-            try:
-                current_app.mail.send(msg)
-            except SMTPDataError as e:
-                # Message too large? Exclude variable info.
-                message = ''.join(
-                    [
-                        message_context,
-                        'Not including variable info because we received an SMTP error:\n',
-                        repr(e),
-                        '\n\n\n\n',
-                        message_tb,
-                    ]
-                )
-                msg.body = message
-                current_app.mail.send(msg)
 
 
 def force_unicode(s):
