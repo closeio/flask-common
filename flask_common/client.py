@@ -67,6 +67,7 @@ def local_request(
     user=None,
     api_key=None,
     meta=None,
+    request_id=None,
 ):
     """
     Performs a request to the current application's view without the network
@@ -106,6 +107,8 @@ def local_request(
         ctx.request.data = json.dumps(data)
     if meta is not None:
         ctx.g.meta = meta
+    if request_id is not None:
+        ctx.g.request_id = request_id
     ctx.push()
 
     try:
