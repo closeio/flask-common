@@ -1,4 +1,5 @@
 from mongoengine import (
+    ListField,
     ReferenceField,
     SafeReferenceField,
     SafeReferenceListField,
@@ -137,7 +138,9 @@ def fetch_related(
         db_field = instance._db_field_map.get(field_name, field_name)
         if isinstance(field, ReferenceField):  # includes SafeReferenceListField
             document_class = field.document_type
-        elif isinstance(field, SafeReferenceListField):
+        elif isinstance(field, ListField) and isinstance(
+            field.field, ReferenceField
+        ):
             document_class = field.field.document_type
         else:
             raise NotImplementedError(
@@ -173,7 +176,7 @@ def fetch_related(
                 if field_name not in obj._internal_data
                 and obj._db_data.get(db_field, None)
             }
-        elif isinstance(field, SafeReferenceListField):
+        elif isinstance(field, ListField):
             ids = [
                 obj._db_data.get(db_field, [])
                 for obj in objs
@@ -288,7 +291,7 @@ def fetch_related(
                     if rel_obj:
                         setattr_unchanged(obj, field_name, rel_obj)
 
-            elif isinstance(field, SafeReferenceListField):
+            elif isinstance(field, ListField):
                 if field_name not in obj._internal_data:
                     value = filter(
                         None,
