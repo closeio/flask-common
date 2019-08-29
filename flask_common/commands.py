@@ -14,9 +14,7 @@ from werkzeug.local import LocalProxy
 __all__ = ['ContextlessCommand', 'Manager', 'Test']
 
 
-# Hack to satisfy isinstance() check in flask_scripts.Manager.__call__ for
-# custom managers.
-class FlaskProxy(LocalProxy, Flask):
+class FlaskProxy(LocalProxy):
     pass
 
 
