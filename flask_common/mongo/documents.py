@@ -37,8 +37,9 @@ class RandomPKDocument(Document):
     def get_pk_prefix(cls):
         return cls._get_collection_name()[:4]
 
-    def _generate_pk(self):
-        return u'%s_%s' % (self.get_pk_prefix(), zbase62.b2a(os.urandom(32)))
+    @classmethod
+    def _generate_pk(cls):
+        return u'%s_%s' % (cls.get_pk_prefix(), zbase62.b2a(os.urandom(32)))
 
     def save(self, *args, **kwargs):
         old_id = self.id
