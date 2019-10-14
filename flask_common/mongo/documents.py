@@ -37,6 +37,10 @@ class RandomPKDocument(Document):
     def get_pk_prefix(cls):
         return cls._get_collection_name()[:4]
 
+    @classmethod
+    def _generate_pk(cls):
+        return u'%s_%s' % (cls.get_pk_prefix(), zbase62.b2a(os.urandom(32)))
+
     def save(self, *args, **kwargs):
         old_id = self.id
 
@@ -44,12 +48,8 @@ class RandomPKDocument(Document):
         kwargs['cascade'] = kwargs.get('cascade', False)
 
         try:
-
             if not self.id:
-                self.id = u'%s_%s' % (
-                    self.get_pk_prefix(),
-                    zbase62.b2a(os.urandom(32)),
-                )
+                self.id = self._generate_pk()
 
                 # Throw an exception if another object with this id already exists.
                 kwargs['force_insert'] = True
