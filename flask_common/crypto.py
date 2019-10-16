@@ -25,6 +25,10 @@ encryption. The same key/iv combination must never be reused to encrypt
 different messages.
 """
 
+# TODO: Make these functions work on Python 3
+# Remove crypto-related tests from tests/conftest.py blacklist when
+# working on this.
+
 
 # Returns a new randomly generated AES key
 def aes_generate_key():
@@ -72,6 +76,8 @@ def aes_decrypt_iv(key, data, iv, extracted_version=None):
     sig = data[-sig_size:]
     if hmac.new(hmac_key, iv + cipher, HMAC_DIGEST).digest() != sig:
         if extracted_version:
+            # Detected we extracted a version when we probably shouldn't
+            # have. Trying to decrypt without extracting version.
             return aes_decrypt(
                 key, extracted_version + iv + data, extract_version=False
             )
