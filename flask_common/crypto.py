@@ -72,7 +72,9 @@ def aes_decrypt_iv(key, data, iv, extracted_version=None):
     sig = data[-sig_size:]
     if hmac.new(hmac_key, iv + cipher, HMAC_DIGEST).digest() != sig:
         if extracted_version:
-            return aes_decrypt(key, extracted_version + iv + data, extract_version=False)
+            return aes_decrypt(
+                key, extracted_version + iv + data, extract_version=False
+            )
         raise AuthenticationError('message authentication failed')
     initial_value = long(iv.encode("hex"), 16) if iv else 1
     ctr = Counter.new(128, initial_value=initial_value)

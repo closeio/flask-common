@@ -1,6 +1,11 @@
 import pytest
 
-from flask_common.crypto import AuthenticationError, aes_decrypt, aes_encrypt, aes_generate_key
+from flask_common.crypto import (
+    AuthenticationError,
+    aes_decrypt,
+    aes_encrypt,
+    aes_generate_key,
+)
 
 
 def test_with_unversioned_data():
