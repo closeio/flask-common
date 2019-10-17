@@ -39,15 +39,15 @@ def aes_generate_key():
 def aes_encrypt(key, data):
     assert len(key) == KEY_LENGTH, 'invalid key size'
     iv = rng(AES_BLOCK_SIZE)
-    return V0_MARKER + iv + aes_encrypt_iv(key, data, iv)
+    return iv + aes_encrypt_iv(key, data, iv)
 
 
 # Verify + decrypt data encrypted with IV
 def aes_decrypt(key, data, extract_version=True):
     assert len(key) == KEY_LENGTH, 'invalid key size'
     extracted_version = None
-    if data[0] == b'\x00' and extract_version:
-        extracted_version = b'\x00'
+    if data[0] == V0_MARKER and extract_version:
+        extracted_version = V0_MARKER
         data = data[1:]
     iv = data[:AES_BLOCK_SIZE]
     data = data[AES_BLOCK_SIZE:]
