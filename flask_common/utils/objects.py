@@ -1,3 +1,11 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
+
 def freeze(x):
     """Convert dicts and lists to frozensets of key/index, value pairs, recursively.
 

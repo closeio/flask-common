@@ -1,3 +1,11 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
+
 def response_success(response, code=None, exception_class=None):
     if exception_class is None:
         exception_class = AssertionError
@@ -32,10 +40,10 @@ def response_error(response, code=None):
 
 
 def compare_req_resp(req_obj, resp_obj):
-    for k, v in req_obj.iteritems():
+    for k, v in req_obj.items():
         assert k in resp_obj.keys(), 'Key %r not in response (keys are %r)' % (
             k,
-            resp_obj.keys(),
+            list(resp_obj.keys()),
         )
         assert resp_obj[k] == v, 'Value for key %r should be %r but is %r' % (
             k,

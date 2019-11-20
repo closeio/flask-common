@@ -5,11 +5,17 @@ created until the command is run). This allows to:
 - Speed up commands that don't need the app object
 - Allow custom app configuration in commands that need customization
 """
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
 
 from flask import Flask
-import flask_script
 from werkzeug.local import LocalProxy
 
+import flask_script
 
 __all__ = ['ContextlessCommand', 'Manager', 'Test']
 

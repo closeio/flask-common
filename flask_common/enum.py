@@ -1,3 +1,13 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
+from builtins import object
+
+
 class Enum(object):
     """
     A list of constants that can be defined in a declarative way.

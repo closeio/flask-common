@@ -1,4 +1,12 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import uuid
+from builtins import str
 
 from zbase62 import zbase62
 

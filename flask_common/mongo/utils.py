@@ -1,6 +1,14 @@
-from mongoengine import ListField, ReferenceField, SafeReferenceField
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
+from builtins import filter, next
 
 from flask_common.utils import grouper
+from mongoengine import ListField, ReferenceField, SafeReferenceField
 
 
 def iter_no_cache(query_set):
@@ -16,7 +24,7 @@ def iter_no_cache(query_set):
         query_set = query_set.batch_size(1000)
 
     while True:
-        yield query_set.next()
+        yield next(query_set)
 
 
 def fetch_related(
@@ -118,7 +126,7 @@ def fetch_related(
 
     # Populate the field_info
     instances = get_instance_for_each_type(objs)
-    for field_name, sub_field_dict in field_dict.iteritems():
+    for field_name, sub_field_dict in field_dict.items():
 
         instance = [
             instance
@@ -155,7 +163,7 @@ def fetch_related(
         )
 
     # Determine what IDs we want to fetch
-    for field_name, sub_field_dict in field_dict.iteritems():
+    for field_name, sub_field_dict in field_dict.items():
         field, db_field, document_class, fields_to_fetch = field_info.get(
             field_name
         ) or (None, None, None, None)
@@ -223,7 +231,7 @@ def fetch_related(
             }
 
     # Fetch objects and cache them
-    for document_class, fetch_opts in fetch_map.iteritems():
+    for document_class, fetch_opts in fetch_map.items():
         cls_filters = extra_filters.get(document_class, {})
 
         # Fetch objects in batches. Also set the batch size so we don't do
@@ -249,7 +257,7 @@ def fetch_related(
                 partial_cache_map[document_class].update(update_dict)
 
     # Assign objects
-    for field_name, sub_field_dict in field_dict.iteritems():
+    for field_name, sub_field_dict in field_dict.items():
         field, db_field, document_class, fields_to_fetch = field_info.get(
             field_name
         ) or (None, None, None, None)
@@ -264,7 +272,7 @@ def fetch_related(
         # if a dict of subfields was passed, go recursive
         if pk_to_obj and isinstance(sub_field_dict, dict):
             fetch_related(
-                pk_to_obj.values(), sub_field_dict, cache_map=cache_map
+                list(pk_to_obj.values()), sub_field_dict, cache_map=cache_map
             )
 
         # attach all the values to all the objects
@@ -288,11 +296,13 @@ def fetch_related(
 
             elif isinstance(field, ListField):
                 if field_name not in obj._internal_data:
-                    value = filter(
-                        None,
-                        [
-                            pk_to_obj.get(id_from_value(field.field, val))
-                            for val in obj._db_data.get(db_field, [])
-                        ],
+                    value = list(
+                        filter(
+                            None,
+                            [
+                                pk_to_obj.get(id_from_value(field.field, val))
+                                for val in obj._db_data.get(db_field, [])
+                            ],
+                        )
                     )
                     setattr_unchanged(obj, field_name, value)

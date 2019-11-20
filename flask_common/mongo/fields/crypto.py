@@ -1,12 +1,19 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 from bson import Binary
-from mongoengine.fields import BinaryField
 
 from flask_common.crypto import (
     KEY_LENGTH,
     AuthenticationError,
-    aes_encrypt,
     aes_decrypt,
+    aes_encrypt,
 )
+from mongoengine.fields import BinaryField
 
 
 class EncryptedStringField(BinaryField):

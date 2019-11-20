@@ -1,6 +1,15 @@
-from bson import ObjectId
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import uuid
+from builtins import object, str
+
 import sqlalchemy as db
+from bson import ObjectId
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship, synonym

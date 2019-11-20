@@ -1,3 +1,10 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 # UUID related helpers
 from .id import id_to_uuid, uuid_to_id
 

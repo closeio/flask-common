@@ -1,6 +1,13 @@
-from .objects import freeze
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
 
 from weakref import WeakValueDictionary
+
+from .objects import freeze
 
 
 class WeakValueCache(WeakValueDictionary):

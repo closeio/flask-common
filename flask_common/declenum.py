@@ -1,5 +1,16 @@
-from sqlalchemy.types import SchemaType, TypeDecorator, Enum
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import re
+from builtins import object
+
+from sqlalchemy.types import Enum, SchemaType, TypeDecorator
+
+from future.utils import with_metaclass
 
 
 class DeclEnumType(SchemaType, TypeDecorator):
@@ -25,7 +36,7 @@ class DeclEnumType(SchemaType, TypeDecorator):
         self.enum_name = enum_name
 
         if enum:
-            self.enum_values = enum.values()
+            self.enum_values = list(enum.values())
             self.enum_name = enum.__name__
 
         self.impl = Enum(
@@ -101,7 +112,7 @@ class EnumMeta(type):
         return iter(cls._reg.values())
 
 
-class DeclEnum(object):
+class DeclEnum(with_metaclass(EnumMeta, object)):
     """
     Declarative enumeration.
     ---
@@ -129,7 +140,6 @@ class DeclEnum(object):
 
     """
 
-    __metaclass__ = EnumMeta
     _reg = {}
 
     @classmethod
@@ -141,7 +151,7 @@ class DeclEnum(object):
 
     @classmethod
     def values(cls):
-        return cls._reg.keys()
+        return list(cls._reg.keys())
 
     @classmethod
     def db_type(cls):
