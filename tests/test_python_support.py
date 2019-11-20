@@ -1,3 +1,11 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
+
 def test_importing_mongo():
     """Verify that we can at least *import* the `mongo` package.
 

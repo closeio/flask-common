@@ -1,10 +1,16 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 from flask_common.test_helpers import (
     Capture,
     DictCompare,
     RegexSetCompare,
     SetCompare,
 )
-
 
 # Note we're using "not" instead of "!=" for comparisons here since the latter
 # uses __ne__, which is not implemented.

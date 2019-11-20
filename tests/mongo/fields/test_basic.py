@@ -1,17 +1,23 @@
-import unittest
-
-from mongoengine import (
-    Document,
-    EmbeddedDocument,
-    EmbeddedDocumentField,
-    ValidationError,
-    NotUniqueError,
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
 )
+
+import unittest
 
 from flask_common.mongo.fields import (
     LowerEmailField,
     LowerStringField,
     TrimmedStringField,
+)
+from mongoengine import (
+    Document,
+    EmbeddedDocument,
+    EmbeddedDocumentField,
+    NotUniqueError,
+    ValidationError,
 )
 
 

@@ -1,8 +1,14 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import unittest
 
-from mongoengine import Document, ValidationError
-
 from flask_common.mongo.fields import PhoneField
+from mongoengine import Document, ValidationError
 
 
 class PhoneFieldTestCase(unittest.TestCase):

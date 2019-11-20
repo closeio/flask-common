@@ -1,14 +1,20 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import datetime
 import time
 import unittest
-
-from mongoengine import Document, ReferenceField, StringField, ValidationError
 
 from flask_common.mongo.documents import (
     DocumentBase,
     RandomPKDocument,
     SoftDeleteDocument,
 )
+from mongoengine import Document, ReferenceField, StringField, ValidationError
 
 
 class DocumentBaseTestCase(unittest.TestCase):

@@ -1,6 +1,16 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import unittest
 import weakref
+from builtins import next, range
 
+from flask_common.mongo.query_counters import custom_query_counter
+from flask_common.mongo.utils import fetch_related, iter_no_cache
 from mongoengine import (
     Document,
     DoesNotExist,
@@ -10,9 +20,6 @@ from mongoengine import (
     SafeReferenceListField,
     StringField,
 )
-
-from flask_common.mongo.query_counters import custom_query_counter
-from flask_common.mongo.utils import fetch_related, iter_no_cache
 
 
 class IterNoCacheTestCase(unittest.TestCase):

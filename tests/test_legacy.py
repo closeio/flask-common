@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import unittest
 
 from flask import Flask
-from mongoengine import Document, ReferenceField, SafeReferenceListField
 
-from flask_mongoengine import MongoEngine
 from flask_common.utils import apply_recursively, slugify, uniqify
-
+from flask_mongoengine import MongoEngine
+from mongoengine import Document, ReferenceField, SafeReferenceListField
 
 app = Flask(__name__)
 

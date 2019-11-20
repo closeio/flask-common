@@ -1,11 +1,18 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import random
 import string
 import unittest
-
-from mongoengine import Document, connection
+from builtins import range
 
 from flask_common.crypto import aes_generate_key
 from flask_common.mongo.fields import EncryptedStringField
+from mongoengine import Document, connection
 
 
 class EncryptedStringFieldTestCase(unittest.TestCase):
