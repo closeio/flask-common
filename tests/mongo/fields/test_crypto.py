@@ -33,7 +33,7 @@ class EncryptedStringFieldTestCase(unittest.TestCase):
         self.assertEqual(s.password, 'hello')
 
         cipher = col.find({'_id': s.id})[0]['password']
-        self.assertTrue('hello' not in cipher)
+        self.assertTrue(b'hello' not in cipher)
         self.assertTrue(len(cipher) > 16)
 
         # Test changing password
@@ -43,7 +43,7 @@ class EncryptedStringFieldTestCase(unittest.TestCase):
         self.assertEqual(s.password, 'other')
 
         other_cipher = col.find({'_id': s.id})[0]['password']
-        self.assertTrue('other' not in other_cipher)
+        self.assertTrue(b'other' not in other_cipher)
         self.assertTrue(len(other_cipher) > 16)
         self.assertNotEqual(other_cipher, cipher)
 
@@ -54,7 +54,7 @@ class EncryptedStringFieldTestCase(unittest.TestCase):
         self.assertEqual(s.password, 'hello')
 
         new_cipher = col.find({'_id': s.id})[0]['password']
-        self.assertTrue('hello' not in new_cipher)
+        self.assertTrue(b'hello' not in new_cipher)
         self.assertTrue(len(new_cipher) > 16)
         self.assertNotEqual(new_cipher, cipher)
         self.assertNotEqual(other_cipher, cipher)

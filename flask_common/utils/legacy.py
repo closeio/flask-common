@@ -5,11 +5,8 @@ from __future__ import (
     unicode_literals,
 )
 
-from future import standard_library
-
-standard_library.install_aliases()
-
 from builtins import map, next, zip, str, object
+from future.utils import text_type
 from past.builtins import basestring
 
 import calendar
@@ -310,7 +307,7 @@ def _gen_tz_info_dict():
 14 LINT'''
 
     tzd = {}
-    for tz_descr in map(str.split, tz_str.split('\n')):
+    for tz_descr in map(text_type.split, tz_str.split('\n')):
         tz_offset = int(float(tz_descr[0]) * 3600)
         for tz_code in tz_descr[1:]:
             assert tz_code not in tzd, "duplicate TZ alias detected"

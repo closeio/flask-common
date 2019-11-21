@@ -8,9 +8,9 @@ from __future__ import (
 import hashlib
 import hmac
 
-from .Crypto import Random
-from .Crypto.Cipher import AES
-from .Crypto.Util import Counter
+from Crypto import Random
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
 
 AES_BLOCK_SIZE = 32  # 256 bit
 HMAC_KEY_SIZE = 32
