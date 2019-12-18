@@ -1,7 +1,17 @@
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
 import re
+from builtins import str
 
 import phonenumbers
+
 from mongoengine.fields import StringField
+from past.builtins import basestring
 
 
 class PhoneField(StringField):

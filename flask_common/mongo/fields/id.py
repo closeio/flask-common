@@ -1,9 +1,14 @@
-import uuid
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
 
 from mongoengine import UUIDField
+import uuid
 
 from flask_common.utils.id import id_to_uuid, uuid_to_id
-
 
 try:
     string_types = (basestring,)  # Python 2

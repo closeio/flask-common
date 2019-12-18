@@ -1,4 +1,11 @@
-from mongoengine.fields import StringField, EmailField
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
+
+from mongoengine.fields import EmailField, StringField
 
 
 class TrimmedStringField(StringField):
@@ -6,7 +13,7 @@ class TrimmedStringField(StringField):
         kwargs['required'] = (
             kwargs.get('required', False) or kwargs.get('min_length', 0) > 0
         )
-        return super(TrimmedStringField, self).__init__(*args, **kwargs)
+        super(TrimmedStringField, self).__init__(*args, **kwargs)
 
     def validate(self, value):
         super(TrimmedStringField, self).validate(value)
