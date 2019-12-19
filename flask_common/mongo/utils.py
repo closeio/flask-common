@@ -34,7 +34,12 @@ def iter_no_cache(query_set):
 
 
 def fetch_related(
-    objs, field_dict, cache_map=None, extra_filters={}, batch_size=100
+    objs,
+    field_dict,
+    cache_map=None,
+    extra_filters={},
+    batch_size=100,
+    filter_funcs={},
 ):
     """
     Recursively fetches related objects for the given document instances.
@@ -78,6 +83,10 @@ def fetch_related(
     model uses organization_id as a shard key, and all contacts are expected to
     be in the same organization, you can pass:
     {Contact: {'organization_id': organization.pk}}
+
+    The function takes an optional dict filter_funcs in the form
+    {document_class: filter_func} which represents the function that is used
+    to fetch and filter documents (defaults to document_class.objects.filter).
     """
     if not objs:
         return
@@ -243,9 +252,10 @@ def fetch_related(
         # Fetch objects in batches. Also set the batch size so we don't do
         # multiple queries per batch.
         for id_group in grouper(batch_size, list(fetch_opts['ids'])):
-            qs = document_class.objects.filter(
-                pk__in=id_group, **cls_filters
-            ).clear_cls_query()
+            filter_func = filter_funcs.get(
+                document_class, document_class.objects.filter
+            )
+            qs = filter_func(pk__in=id_group, **cls_filters).clear_cls_query()
 
             # only fetch the requested fields
             if fetch_opts['fields_to_fetch']:
