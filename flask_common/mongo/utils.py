@@ -37,9 +37,9 @@ def fetch_related(
     objs,
     field_dict,
     cache_map=None,
-    extra_filters={},
+    extra_filters=None,
     batch_size=100,
-    filter_funcs={},
+    filter_funcs=None,
 ):
     """
     Recursively fetches related objects for the given document instances.
@@ -90,6 +90,12 @@ def fetch_related(
     """
     if not objs:
         return
+
+    if extra_filters is None:
+        extra_filters = {}
+
+    if filter_funcs is None:
+        filter_funcs = {}
 
     # Cache map holds a map of pks to objs for objects we fetched, over all
     # iterations / from previous calls, by document class (doesn't include
