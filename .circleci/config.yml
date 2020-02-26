@@ -5,7 +5,6 @@ workflows:
   workflow:
     jobs:
       - test-2.7
-      - test-3.4
       - test-3.5
       - test-3.6
       - test-3.7
@@ -30,11 +29,6 @@ jobs:
     <<: *defaults
     docker:
     - image: circleci/python:2.7
-    - image: mongo:3.2.19
-  test-3.4:
-    <<: *defaults
-    docker:
-    - image: circleci/python:3.4
     - image: mongo:3.2.19
   test-3.5:
     <<: *defaults
