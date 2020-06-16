@@ -13,8 +13,6 @@ from flask.testing import FlaskClient
 from six import PY3
 from werkzeug.datastructures import Headers
 
-from .utils import smart_unicode
-
 
 class Client(FlaskClient):
     """
@@ -31,14 +29,7 @@ class Client(FlaskClient):
             kwargs['data'] = json.dumps(kwargs.pop('json'))
             kwargs['content_type'] = 'application/json'
 
-        resp = super(Client, self).open(*args, **kwargs)
-
-        try:
-            resp.json = lambda: json.loads(smart_unicode(resp.data))
-        except ValueError:
-            pass
-
-        return resp
+        return super(Client, self).open(*args, **kwargs)
 
 
 class ApiClient(Client):

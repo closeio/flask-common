@@ -53,6 +53,7 @@ class DocumentBaseTestCase(unittest.TestCase):
         last_date_created = doc.date_created
         last_date_updated = doc.date_updated
 
+        time.sleep(0.001)  # make sure some time passes between the updates
         doc.text = 'new'
         doc.save()
         doc.reload()
