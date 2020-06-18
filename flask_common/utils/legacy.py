@@ -695,7 +695,11 @@ def retry(func=None, exc=Exception, tries=1, wait=0):
     if func is None:
         # Being used as a decorator generator
         def retry_decorator(func):
-            return lambda *args, **kwargs: _retry(lambda: func(*args, **kwargs))
+            @wraps(func)
+            def _decorated(*args, **kwargs):
+                return _retry(lambda: func(*args, **kwargs))
+
+            return _decorated
 
         return retry_decorator
     else:
