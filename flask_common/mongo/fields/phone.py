@@ -1,17 +1,8 @@
-from __future__ import (
-    absolute_import,
-    division,
-    print_function,
-    unicode_literals,
-)
-
 import re
-from builtins import str
 
 import phonenumbers
 
 from mongoengine.fields import StringField
-from past.builtins import basestring
 
 
 class PhoneField(StringField):
@@ -67,7 +58,7 @@ class PhoneField(StringField):
         return PhoneField.to_raw_phone(value)
 
     def _get_formatted_phone(self, value, form):
-        if isinstance(value, basestring) and value != '':
+        if isinstance(value, str) and value != '':
             try:
                 phone = PhoneField._parse(value)
                 value = phonenumbers.format_number(phone, form)
@@ -87,7 +78,7 @@ class PhoneField(StringField):
 
     @classmethod
     def to_raw_phone(cls, value, region=None):
-        if isinstance(value, basestring) and value != '':
+        if isinstance(value, str) and value != '':
             try:
                 number = value
                 phone = PhoneField._parse(number, region)

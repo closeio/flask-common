@@ -1,14 +1,4 @@
-from __future__ import (
-    absolute_import,
-    division,
-    print_function,
-    unicode_literals,
-)
-
-from builtins import filter
-
 from flask_common.utils import grouper
-from future.utils import PY2
 from mongoengine import ListField, ReferenceField, SafeReferenceField
 
 
@@ -24,7 +14,7 @@ def iter_no_cache(query_set):
     if query_set._batch_size is None:
         query_set = query_set.batch_size(1000)
 
-    next = query_set.next if PY2 else query_set.__next__
+    next = query_set.__next__
 
     while True:
         try:

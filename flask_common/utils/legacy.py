@@ -1,17 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from future import standard_library
-
-standard_library.install_aliases()
-from builtins import next
-from builtins import zip
-from builtins import object
-from builtins import str
-from past.builtins import basestring
-
 import calendar
 import codecs
 import csv
@@ -28,7 +14,6 @@ import time
 from email.utils import formatdate
 from flask import request, Response
 from functools import wraps
-from future.utils import PY3
 from logging.handlers import SMTPHandler
 
 try:
@@ -125,19 +110,12 @@ def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
         utf_8_encoder(unicode_csv_data), dialect=dialect, **kwargs
     )
     for row in csv_reader:
-        # decode UTF-8 back to Unicode, cell by cell:
-        if PY3:
-            yield row
-        else:
-            yield [str(cell, 'utf-8') for cell in row]
+        yield row
 
 
 def utf_8_encoder(unicode_csv_data):
     for line in unicode_csv_data:
-        if PY3:
-            yield line
-        else:
-            yield line.encode('utf-8')
+        yield line
 
 
 class CsvReader(object):
@@ -185,7 +163,7 @@ class CsvWriter(object):
 
     def writerow(self, row):
         self.writer.writerow(
-            [s.encode("utf-8") if isinstance(s, basestring) else s for s in row]
+            [s.encode("utf-8") if isinstance(s, str) else s for s in row]
         )
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
@@ -205,7 +183,7 @@ class CsvWriter(object):
 def smart_unicode(s, encoding='utf-8', errors='strict'):
     if isinstance(s, str):
         return s
-    if not isinstance(s, basestring):
+    if not isinstance(s, str):
         if hasattr(s, '__unicode__'):
             s = str(s)
         else:
