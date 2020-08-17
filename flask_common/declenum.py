@@ -1,4 +1,3 @@
-from future.utils import with_metaclass
 from sqlalchemy.types import SchemaType, TypeDecorator, Enum
 import re
 
@@ -102,7 +101,7 @@ class EnumMeta(type):
         return iter(cls._reg.values())
 
 
-class DeclEnum(with_metaclass(EnumMeta, object)):
+class DeclEnum(metaclass=EnumMeta):
     """
     Declarative enumeration.
     ---

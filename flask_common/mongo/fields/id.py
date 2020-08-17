@@ -1,19 +1,7 @@
-from __future__ import (
-    absolute_import,
-    division,
-    print_function,
-    unicode_literals,
-)
-
 from mongoengine import UUIDField
 import uuid
 
 from flask_common.utils.id import id_to_uuid, uuid_to_id
-
-try:
-    string_types = (basestring,)  # Python 2
-except NameError:
-    string_types = (str,)  # Python 3
 
 
 class IDField(UUIDField):
@@ -46,12 +34,12 @@ class IDField(UUIDField):
             return value
 
     def to_mongo(self, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             value = id_to_uuid(value)
         return super(IDField, self).to_mongo(value)
 
     def prepare_query_value(self, op, value):
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             try:
                 value = id_to_uuid(value)
             except ValueError:

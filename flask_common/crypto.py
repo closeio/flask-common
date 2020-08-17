@@ -28,12 +28,6 @@ Current code decrypts from and encrypts to version 1 only.
 In CTR mode, IV is also often called a Nonce (in `cryptography`'s
 public interface, for example).
 """
-from __future__ import (
-    absolute_import,
-    division,
-    print_function,
-    unicode_literals,
-)
 
 import hashlib
 import hmac

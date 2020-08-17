@@ -1,13 +1,5 @@
-from __future__ import (
-    absolute_import,
-    division,
-    print_function,
-    unicode_literals,
-)
-
 import datetime
 import os
-from builtins import str
 
 from mongoengine import (
     BooleanField,
@@ -19,7 +11,6 @@ from mongoengine import (
     ValidationError,
     queryset_manager,
 )
-from past.builtins import basestring
 from zbase62 import zbase62
 
 from .querysets import NotDeletedQuerySet
@@ -27,7 +18,7 @@ from .querysets import NotDeletedQuerySet
 
 class StringIdField(StringField):
     def to_mongo(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, str):
             raise ValidationError(
                 errors={
                     self.name: ['StringIdField only accepts string values.']

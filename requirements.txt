@@ -1,4 +1,3 @@
-future==0.17.1
 python-dateutil==2.5.0
 pytz==2015.7
 flask>=1
